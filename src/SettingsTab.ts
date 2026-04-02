@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, normalizePath } from "obsidian";
+import { App, PluginSettingTab, Setting, normalizePath, setIcon } from "obsidian";
 import ObsidianIcalPlugin from "./ObsidianIcalPlugin";
 
 export class SettingsTab extends PluginSettingTab {
@@ -11,15 +11,29 @@ export class SettingsTab extends PluginSettingTab {
 
 	display(): void {
 		const { containerEl } = this;
-
 		containerEl.empty();
 
-		containerEl.createEl("h2", { text: "iCal Pro Settings" });
+		// --- Header ---
+		const header = containerEl.createDiv({ cls: "ical-pro-header" });
+		const headerText = header.createDiv({ cls: "ical-pro-header-title" });
+		headerText.createEl("h2", { text: "iCal Pro" });
+		headerText.createEl("span", { text: "v" + this.plugin.manifest.version, cls: "ical-pro-version" });
 
-		// --- Group: General ---
+		// --- Live URL Card (The "Status" Area) ---
+		const statusCard = containerEl.createDiv({ cls: "ical-pro-status-card" });
+		const statusTitle = statusCard.createDiv({ cls: "ical-pro-card-title" });
+		setIcon(statusTitle, "link");
+		statusTitle.createSpan({ text: " Your Subscription URL" });
+		
+		const urlContainer = statusCard.createDiv({ cls: "ical-url-container" });
+		this.renderUrl(urlContainer);
+
+		// --- Section: General ---
+		this.addHeader(containerEl, "settings", "General Settings");
+
 		new Setting(containerEl)
 			.setName("Target directory")
-			.setDesc("The folder where tasks will be scanned. Use '/' for the entire vault.")
+			.setDesc("The folder where tasks will be scanned. Choose '/' for the entire vault.")
 			.addText((text) =>
 				text
 					.setPlaceholder("e.g., 100_Logs/daily")
@@ -33,7 +47,7 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("File name")
-			.setDesc("The name of your generated file (e.g. obsidian.ics).")
+			.setDesc("The name of your generated .ics file.")
 			.addText((text) =>
 				text
 					.setPlaceholder("obsidian.ics")
@@ -45,27 +59,23 @@ export class SettingsTab extends PluginSettingTab {
 					})
 			);
 
-		// --- Group: GitHub Sync ---
-		containerEl.createEl("h3", { text: "GitHub Sync Configuration" });
+		// --- Section: GitHub Sync ---
+		this.addHeader(containerEl, "cloud", "GitHub Sync Configuration");
 		
-		const githubDesc = containerEl.createEl("div", { cls: "setting-item-description" });
-		githubDesc.appendText("To sync your calendar online, you need a ");
-		githubDesc.createEl("a", { 
-			text: "GitHub Personal Access Token", 
-			href: "https://github.com/settings/tokens?type=beta" 
-		});
-		githubDesc.appendText(" (with Gist permissions) and your ");
-		githubDesc.createEl("a", { 
-			text: "Gist ID", 
-			href: "https://gist.github.com/" 
-		});
-		githubDesc.appendText(".");
+		const githubInfo = containerEl.createDiv({ cls: "ical-pro-info-box" });
+		setIcon(githubInfo, "info");
+		const infoText = githubInfo.createDiv();
+		infoText.createSpan({ text: "Sync your calendar online using " });
+		infoText.createEl("a", { text: "GitHub Gist", href: "https://gist.github.com/" });
+		infoText.createSpan({ text: ". Requires a " });
+		infoText.createEl("a", { text: "Personal Access Token", href: "https://github.com/settings/tokens?type=beta" });
+		infoText.createSpan({ text: " with 'Gist' scope." });
 
 		new Setting(containerEl)
 			.setName("GitHub Username")
 			.addText((text) =>
 				text
-					.setPlaceholder("e.g., liuh886")
+					.setPlaceholder("liuh886")
 					.setValue(this.plugin.settings.githubUsername)
 					.onChange(async (value) => {
 						this.plugin.settings.githubUsername = value;
@@ -76,6 +86,7 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Personal Access Token")
+			.setDesc("Used to upload your .ics to GitHub.")
 			.addText((text) =>
 				text
 					.setPlaceholder("ghp_...")
@@ -88,9 +99,10 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Gist ID")
+			.setDesc("The ID of the Gist where your file will be saved.")
 			.addText((text) =>
 				text
-					.setPlaceholder("Paste your Gist ID here")
+					.setPlaceholder("f4faaf35...")
 					.setValue(this.plugin.settings.githubGistId)
 					.onChange(async (value) => {
 						this.plugin.settings.githubGistId = value;
@@ -99,8 +111,8 @@ export class SettingsTab extends PluginSettingTab {
 					})
 			);
 
-		// --- Group: Advanced ---
-		containerEl.createEl("h3", { text: "Task & Date Rules" });
+		// --- Section: Rules ---
+		this.addHeader(containerEl, "list-checks", "Task & Date Rules");
 
 		new Setting(containerEl)
 			.setName("Ignore completed tasks")
@@ -128,10 +140,26 @@ export class SettingsTab extends PluginSettingTab {
 					})
 			);
 
-		// --- Live URL Display ---
-		containerEl.createEl("h3", { text: "Your Subscription URL" });
-		const urlContainer = containerEl.createEl("div", { cls: "ical-url-container" });
-		this.renderUrl(urlContainer);
+		new Setting(containerEl)
+			.setName("Save Interval (Minutes)")
+			.setDesc("How often to sync in the background.")
+			.addSlider((slider) =>
+				slider
+					.setLimits(5, 60, 5)
+					.setValue(this.plugin.settings.periodicSaveInterval)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.periodicSaveInterval = value;
+						await this.plugin.saveSettings();
+					})
+			);
+	}
+
+	private addHeader(el: HTMLElement, icon: string, text: string) {
+		const header = el.createDiv({ cls: "ical-pro-section-header" });
+		const iconEl = header.createDiv({ cls: "ical-pro-section-icon" });
+		setIcon(iconEl, icon);
+		header.createEl("h3", { text: text });
 	}
 
 	private updateUrlDisplay() {
@@ -148,7 +176,6 @@ export class SettingsTab extends PluginSettingTab {
 		let filename = this.plugin.settings.filename || "obsidian.ics";
 		
 		if (username && gistId) {
-			// Construct the standard Gist Raw URL
 			const url = `https://gist.githubusercontent.com/${username}/${gistId}/raw/${filename}`;
 			container.createEl("code", { text: url, cls: "ical-url-text" });
 			
@@ -160,8 +187,8 @@ export class SettingsTab extends PluginSettingTab {
 			});
 		} else {
 			container.createEl("p", { 
-				text: "Enter your GitHub Username and Gist ID above to generate a subscription URL.",
-				cls: "setting-item-description"
+				text: "Complete GitHub Sync configuration to generate your URL.",
+				cls: "ical-url-placeholder"
 			});
 		}
 	}

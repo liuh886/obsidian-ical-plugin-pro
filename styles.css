@@ -1,22 +1,124 @@
-.ical-url-container {
+/* --- Header & Branding --- */
+.ical-pro-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--background-modifier-border);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+}
+
+.ical-pro-header h2 {
+    margin: 0;
+    color: var(--text-accent);
+}
+
+.ical-pro-version {
+    font-size: 0.8em;
+    opacity: 0.6;
+    font-family: var(--font-monospace);
+}
+
+/* --- Status Card (URL Display) --- */
+.ical-pro-status-card {
     background-color: var(--background-secondary);
     border: 1px solid var(--background-modifier-border);
-    border-radius: 4px;
-    padding: 12px;
-    margin-top: 10px;
+    border-left: 4px solid var(--text-accent);
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.ical-pro-card-title {
+    display: flex;
+    align-items: center;
+    font-weight: bold;
+    font-size: 1.1em;
+    margin-bottom: 12px;
+    color: var(--text-normal);
+}
+
+.ical-pro-card-title svg {
+    margin-right: 8px;
+    color: var(--text-accent);
+}
+
+.ical-url-container {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
 }
 
 .ical-url-text {
-    word-break: break-all;
+    display: block;
+    padding: 10px;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
     font-family: var(--font-monospace);
     font-size: 0.9em;
-    color: var(--text-accent);
-    user-select: all;
+    color: var(--text-muted);
+    word-break: break-all;
+    line-height: 1.4;
 }
 
-.ical-url-container button {
-    align-self: flex-start;
+.ical-url-placeholder {
+    font-style: italic;
+    opacity: 0.6;
+    margin: 0;
+}
+
+/* --- Section Headers --- */
+.ical-pro-section-header {
+    display: flex;
+    align-items: center;
+    margin-top: 35px;
+    margin-bottom: 15px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.ical-pro-section-icon {
+    margin-right: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.ical-pro-section-icon svg {
+    width: 20px;
+    height: 20px;
+    opacity: 0.8;
+}
+
+.ical-pro-section-header h3 {
+    margin: 0;
+    font-size: 1.2em;
+}
+
+/* --- Info Box --- */
+.ical-pro-info-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    background-color: var(--background-secondary-alt);
+    border-radius: 6px;
+    font-size: 0.9em;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.ical-pro-info-box svg {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    color: var(--text-accent);
+}
+
+/* --- Improvements to standard Obsidian elements --- */
+.setting-item {
+    border-top: none;
+    padding: 12px 0;
 }
