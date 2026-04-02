@@ -153,7 +153,7 @@ export default class ObsidianIcalPlugin extends Plugin {
 				url: `https://api.github.com/gists/${githubGistId}`,
 				method: "GET",
 				headers: {
-					"Authorization": `token ${githubPersonalAccessToken}`,
+					"Authorization": `Bearer ${githubPersonalAccessToken}`,
 					"Accept": "application/vnd.github.v3+json"
 				}
 			});

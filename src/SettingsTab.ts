@@ -133,6 +133,19 @@ export class SettingsTab extends PluginSettingTab {
 					})
 			);
 
+		new Setting(containerEl)
+			.setName("Gist Filename")
+			.setDesc("The name of the file inside the Gist (default: obsidian.ics).")
+			.addText((text) =>
+				text.setPlaceholder("obsidian.ics")
+					.setValue(this.plugin.settings.filename)
+					.onChange(async (value) => {
+						this.plugin.settings.filename = value;
+						await this.plugin.saveSettings();
+						this.updateUrlDisplay();
+					})
+			);
+
 		const setupLinks = containerEl.createDiv({ cls: "ical-pro-info-box" });
 		setIcon(setupLinks, "help-circle");
 		const linksText = setupLinks.createDiv();

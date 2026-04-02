@@ -529,17 +529,19 @@ var GistClient = class {
   }
   async save(calendarContent) {
     const { githubPersonalAccessToken, githubGistId, filename } = this.settings;
+    const debugLogger = logger(this.settings.isDebug);
     if (!githubPersonalAccessToken || !githubGistId) {
-      logger(this.settings.isDebug).log("Gist sync skipped: Missing Token or Gist ID.");
+      debugLogger.log("Gist sync skipped: Missing Token or Gist ID.");
       return false;
     }
     const fname = filename || "obsidian.ics";
+    console.log(`iCal Pro: Starting Gist sync for Gist ID: ${githubGistId}, Filename: ${fname}`);
     try {
       const response = await (0, import_obsidian3.requestUrl)({
         url: `https://api.github.com/gists/${githubGistId}`,
         method: "PATCH",
         headers: {
-          "Authorization": `token ${githubPersonalAccessToken}`,
+          "Authorization": `Bearer ${githubPersonalAccessToken}`,
           "Accept": "application/vnd.github.v3+json",
           "Content-Type": "application/json"
         },
@@ -551,16 +553,17 @@ var GistClient = class {
           }
         })
       });
-      if (response.status === 200) {
-        logger(this.settings.isDebug).log("Successfully updated Gist.");
+      if (response.status === 200 || response.status === 201) {
+        console.log("iCal Pro: Successfully updated Gist.");
         return true;
       } else {
-        console.error("Gist update failed:", response.text);
-        return false;
+        const errorMsg = `Gist update failed. Status: ${response.status}, Response: ${response.text}`;
+        console.error("iCal Pro:", errorMsg);
+        throw new Error(errorMsg);
       }
     } catch (error) {
-      console.error("Gist update error:", error);
-      return false;
+      console.error("iCal Pro: Gist update error:", error);
+      throw error;
     }
   }
 };
@@ -855,6 +858,19 @@ var SettingsTab = class extends import_obsidian7.PluginSettingTab {
     const syncInfo = syncCol.createDiv({ cls: "ical-sync-info" });
     syncInfo.createEl("div", { text: `Last Result: ${this.plugin.lastSyncStatus}`, cls: `ical-status-${this.plugin.lastSyncStatus.toLowerCase()}` });
     syncInfo.createEl("div", { text: `At: ${this.plugin.lastSyncTime}`, cls: "ical-sync-time" });
+    const syncBtn = syncCol.createEl("button", { text: "Sync Now", cls: "mod-cta ical-sync-button" });
+    syncBtn.onClickEvent(async () => {
+      syncBtn.setDisabled(true);
+      syncBtn.setText("Syncing...");
+      try {
+        await this.plugin.saveCalendar();
+        new import_obsidian7.Notice("iCal Pro: Sync successful!");
+        this.display();
+      } catch (e) {
+        new import_obsidian7.Notice("iCal Pro: Sync failed.");
+        this.display();
+      }
+    });
     this.addHeader(containerEl, "search", "1. Task Sources");
     new import_obsidian7.Setting(containerEl).setName("Target Directory").setDesc("The plugin will only scan files inside this folder. Type to search.").addText((text) => {
       new FolderSuggest(this.app, text.inputEl);
@@ -877,20 +893,32 @@ var SettingsTab = class extends import_obsidian7.PluginSettingTab {
       tip.setText("\u{1F4A1} Mode: Standard Emoji-based (\u{1F4C5} 2026-04-02).");
     }
     this.addHeader(containerEl, "cloud", "3. GitHub Sync Configuration");
-    new import_obsidian7.Setting(containerEl).setName("GitHub Username").addText((text) => text.setValue(this.plugin.settings.githubUsername).onChange(async (value) => {
+    new import_obsidian7.Setting(containerEl).setName("GitHub Username").setDesc("Your GitHub account name (required for URL).").addText((text) => text.setValue(this.plugin.settings.githubUsername).onChange(async (value) => {
       this.plugin.settings.githubUsername = value;
       await this.plugin.saveSettings();
       this.updateUrlDisplay();
     }));
-    new import_obsidian7.Setting(containerEl).setName("Gist ID").addText((text) => text.setValue(this.plugin.settings.githubGistId).onChange(async (value) => {
+    new import_obsidian7.Setting(containerEl).setName("Gist ID").setDesc("Create a Gist at gist.github.com and paste its ID here.").addText((text) => text.setValue(this.plugin.settings.githubGistId).onChange(async (value) => {
       this.plugin.settings.githubGistId = value;
       await this.plugin.saveSettings();
       this.updateUrlDisplay();
     }));
-    new import_obsidian7.Setting(containerEl).setName("Personal Access Token").addText((text) => text.setPlaceholder("ghp_...").setValue(this.plugin.settings.githubPersonalAccessToken).onChange(async (value) => {
+    new import_obsidian7.Setting(containerEl).setName("Personal Access Token").setDesc("Create a Token (Gist scope) at GitHub Settings -> Developer Settings.").addText((text) => text.setPlaceholder("ghp_...").setValue(this.plugin.settings.githubPersonalAccessToken).onChange(async (value) => {
       this.plugin.settings.githubPersonalAccessToken = value;
       await this.plugin.saveSettings();
     }));
+    new import_obsidian7.Setting(containerEl).setName("Gist Filename").setDesc("The name of the file inside the Gist (default: obsidian.ics).").addText((text) => text.setPlaceholder("obsidian.ics").setValue(this.plugin.settings.filename).onChange(async (value) => {
+      this.plugin.settings.filename = value;
+      await this.plugin.saveSettings();
+      this.updateUrlDisplay();
+    }));
+    const setupLinks = containerEl.createDiv({ cls: "ical-pro-info-box" });
+    (0, import_obsidian7.setIcon)(setupLinks, "help-circle");
+    const linksText = setupLinks.createDiv();
+    linksText.createSpan({ text: "Setup Guides: " });
+    linksText.createEl("a", { text: "Create Token", href: "https://github.com/settings/tokens?type=beta" });
+    linksText.createSpan({ text: " | " });
+    linksText.createEl("a", { text: "Manage Gists", href: "https://gist.github.com/" });
     new import_obsidian7.Setting(containerEl).setName("Verify Connection").addButton((btn) => btn.setButtonText("Test GitHub Sync").onClick(async () => {
       btn.setDisabled(true);
       const result = await this.plugin.validateConnection();
@@ -898,17 +926,25 @@ var SettingsTab = class extends import_obsidian7.PluginSettingTab {
       btn.setDisabled(false);
     }));
     this.addHeader(containerEl, "bell", "4. Alarms & Reminders");
-    new import_obsidian7.Setting(containerEl).setName("Enable Calendar Alarms").setDesc("Include VALARM components in the ICS file.").addToggle((toggle) => toggle.setValue(this.plugin.settings.enableAlarms).onChange(async (value) => {
+    new import_obsidian7.Setting(containerEl).setName("Enable Calendar Alarms").addToggle((toggle) => toggle.setValue(this.plugin.settings.enableAlarms).onChange(async (value) => {
       this.plugin.settings.enableAlarms = value;
       await this.plugin.saveSettings();
     }));
-    new import_obsidian7.Setting(containerEl).setName("Default Alarm Offset").setDesc("Minutes before the event to trigger an alarm (if \u23F0 exists without a number).").addText((text) => text.setPlaceholder("20").setValue(String(this.plugin.settings.defaultAlarmOffset)).onChange(async (value) => {
+    new import_obsidian7.Setting(containerEl).setName("Default Alarm Offset").setDesc("Minutes before the event.").addText((text) => text.setPlaceholder("20").setValue(String(this.plugin.settings.defaultAlarmOffset)).onChange(async (value) => {
       this.plugin.settings.defaultAlarmOffset = parseInt(value) || 20;
       await this.plugin.saveSettings();
     }));
     this.addHeader(containerEl, "sliders", "5. Advanced Rules");
     new import_obsidian7.Setting(containerEl).setName("Ignore Completed Tasks").addToggle((toggle) => toggle.setValue(this.plugin.settings.ignoreCompletedTasks).onChange(async (value) => {
       this.plugin.settings.ignoreCompletedTasks = value;
+      await this.plugin.saveSettings();
+    }));
+    new import_obsidian7.Setting(containerEl).setName("Filter by Age (Ignore Old Tasks)").setDesc("Ignore tasks older than X days. Disable to include all past tasks.").addToggle((toggle) => toggle.setValue(this.plugin.settings.ignoreOldTasks).onChange(async (value) => {
+      this.plugin.settings.ignoreOldTasks = value;
+      await this.plugin.saveSettings();
+      this.display();
+    })).addText((text) => text.setPlaceholder("365").setValue(String(this.plugin.settings.oldTaskInDays)).onChange(async (value) => {
+      this.plugin.settings.oldTaskInDays = parseInt(value) || 365;
       await this.plugin.saveSettings();
     }));
     new import_obsidian7.Setting(containerEl).setName("Sync Interval (Minutes)").addSlider((slider) => slider.setLimits(5, 120, 5).setValue(this.plugin.settings.periodicSaveInterval).setDynamicTooltip().onChange(async (value) => {
@@ -1059,7 +1095,7 @@ var ObsidianIcalPlugin = class extends import_obsidian8.Plugin {
         url: `https://api.github.com/gists/${githubGistId}`,
         method: "GET",
         headers: {
-          "Authorization": `token ${githubPersonalAccessToken}`,
+          "Authorization": `Bearer ${githubPersonalAccessToken}`,
           "Accept": "application/vnd.github.v3+json"
         }
       });
