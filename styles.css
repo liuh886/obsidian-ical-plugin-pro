@@ -90,6 +90,11 @@
 .ical-status-failed { color: var(--text-error); font-weight: bold; }
 .ical-sync-time { font-size: 0.85em; opacity: 0.7; margin-top: 4px; }
 
+.ical-sync-button {
+    margin-top: 12px;
+    width: 100%;
+}
+
 /* --- Section Headers --- */
 .ical-pro-section-header {
     display: flex;

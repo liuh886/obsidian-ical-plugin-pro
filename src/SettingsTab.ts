@@ -39,6 +39,20 @@ export class SettingsTab extends PluginSettingTab {
 		const syncInfo = syncCol.createDiv({ cls: "ical-sync-info" });
 		syncInfo.createEl("div", { text: `Last Result: ${this.plugin.lastSyncStatus}`, cls: `ical-status-${this.plugin.lastSyncStatus.toLowerCase()}` });
 		syncInfo.createEl("div", { text: `At: ${this.plugin.lastSyncTime}`, cls: "ical-sync-time" });
+		
+		const syncBtn = syncCol.createEl("button", { text: "Sync Now", cls: "mod-cta ical-sync-button" });
+		syncBtn.onClickEvent(async () => {
+			syncBtn.setDisabled(true);
+			syncBtn.setText("Syncing...");
+			try {
+				await this.plugin.saveCalendar();
+				new Notice("iCal Pro: Sync successful!");
+				this.display(); // Refresh to show new time
+			} catch (e) {
+				new Notice("iCal Pro: Sync failed.");
+				this.display();
+			}
+		});
 
 		// --- SECTION 1: TASK SOURCES ---
 		this.addHeader(containerEl, "search", "1. Task Sources");
@@ -85,6 +99,7 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("GitHub Username")
+			.setDesc("Your GitHub account name (required for URL).")
 			.addText((text) =>
 				text.setValue(this.plugin.settings.githubUsername)
 					.onChange(async (value) => {
@@ -96,6 +111,7 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Gist ID")
+			.setDesc("Create a Gist at gist.github.com and paste its ID here.")
 			.addText((text) =>
 				text.setValue(this.plugin.settings.githubGistId)
 					.onChange(async (value) => {
@@ -107,6 +123,7 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Personal Access Token")
+			.setDesc("Create a Token (Gist scope) at GitHub Settings -> Developer Settings.")
 			.addText((text) =>
 				text.setPlaceholder("ghp_...")
 					.setValue(this.plugin.settings.githubPersonalAccessToken)
@@ -115,6 +132,14 @@ export class SettingsTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		const setupLinks = containerEl.createDiv({ cls: "ical-pro-info-box" });
+		setIcon(setupLinks, "help-circle");
+		const linksText = setupLinks.createDiv();
+		linksText.createSpan({ text: "Setup Guides: " });
+		linksText.createEl("a", { text: "Create Token", href: "https://github.com/settings/tokens?type=beta" });
+		linksText.createSpan({ text: " | " });
+		linksText.createEl("a", { text: "Manage Gists", href: "https://gist.github.com/" });
 
 		new Setting(containerEl)
 			.setName("Verify Connection")
@@ -133,7 +158,6 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Enable Calendar Alarms")
-			.setDesc("Include VALARM components in the ICS file.")
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.enableAlarms)
@@ -145,7 +169,7 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Default Alarm Offset")
-			.setDesc("Minutes before the event to trigger an alarm (if ⏰ exists without a number).")
+			.setDesc("Minutes before the event.")
 			.addText((text) =>
 				text
 					.setPlaceholder("20")
@@ -169,6 +193,24 @@ export class SettingsTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		new Setting(containerEl)
+			.setName("Filter by Age (Ignore Old Tasks)")
+			.setDesc("Ignore tasks older than X days. Disable to include all past tasks.")
+			.addToggle((toggle) => toggle
+				.setValue(this.plugin.settings.ignoreOldTasks)
+				.onChange(async (value) => {
+					this.plugin.settings.ignoreOldTasks = value;
+					await this.plugin.saveSettings();
+					this.display();
+				}))
+			.addText((text) => text
+				.setPlaceholder("365")
+				.setValue(String(this.plugin.settings.oldTaskInDays))
+				.onChange(async (value) => {
+					this.plugin.settings.oldTaskInDays = parseInt(value) || 365;
+					await this.plugin.saveSettings();
+				}));
 
 		new Setting(containerEl)
 			.setName("Sync Interval (Minutes)")
