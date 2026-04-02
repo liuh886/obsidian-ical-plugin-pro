@@ -57,6 +57,15 @@ export class ICalBuilder {
 		return this;
 	}
 
+	public addAlarm(minutesBefore: number, summary: string): this {
+		this.lines.push("BEGIN:VALARM");
+		this.lines.push("ACTION:DISPLAY");
+		this.lines.push(`DESCRIPTION:${this.escapeText(summary)}`);
+		this.lines.push(`TRIGGER:-PT${minutesBefore}M`);
+		this.lines.push("END:VALARM");
+		return this;
+	}
+
 	public addEventProperty(key: string, value: string, escape = true): this {
 		const escapedValue = escape ? this.escapeText(value) : value;
 		this.lines.push(`${key}:${escapedValue}`);
@@ -65,35 +74,25 @@ export class ICalBuilder {
 
 	public build(): string {
 		this.lines.push("END:VCALENDAR");
-		// RFC 5545 specifies that each line MUST be separated by CRLF
-		// and lines longer than 75 octets SHOULD be folded.
 		return this.lines.map((line) => this.foldLine(line)).join("\r\n") + "\r\n";
 	}
 
 	private escapeText(text: string): string {
 		if (!text) return "";
 		return text
-			// RFC 5545: The backslash character "\" MUST be escaped.
 			.replace(/\\/g, "\\\\")
-			// RFC 5545: Semicolon ";" and Comma "," MUST be escaped.
 			.replace(/;/g, "\\;")
 			.replace(/,/g, "\\,")
-			// RFC 5545: Newline characters MUST be escaped as "\n" or "\N".
 			.replace(/\n/g, "\\n")
 			.replace(/\r/g, "");
 	}
 
 	private foldLine(line: string): string {
-		// Basic line folding logic: split lines longer than 75 chars
 		if (line.length <= 75) return line;
-
 		let result = "";
 		let currentLine = line;
-
 		while (currentLine.length > 75) {
-			// Take first 75 chars
 			result += currentLine.substring(0, 75) + "\r\n ";
-			// The space at the start of the next line is the "folding" indicator
 			currentLine = currentLine.substring(75);
 		}
 		result += currentLine;

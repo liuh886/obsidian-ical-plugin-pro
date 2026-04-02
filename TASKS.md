@@ -31,3 +31,10 @@
 - [ ] 6.3 **Priority Mapping**: Implement logic to map Obsidian task priorities (`⏫`, `🔼`, `🔽`) to iCalendar `PRIORITY` values (1-9).
 - [ ] 6.4 **Global Alarm Settings**: Add settings to `Settings.ts` and `SettingsTab.ts` for default alarm offsets (e.g., "Always remind me 10 mins before events").
 - [ ] 6.5 **Advanced VTODO metadata**: Enhance `IcalService.ts` to include more VTODO specific properties like `PERCENT-COMPLETE` or `CATEGORIES` based on tags.
+
+## Phase 7: Automation & Command Refinement
+- [ ] 7.1 **Parameterize `sync.ps1`**: Update the PowerShell script to support dynamic vault names via command-line arguments (defaulting to current).
+- [ ] 7.2 **Enhanced Command Notifications**: Add `Notice` feedback to the `Save calendar` command (Starting/Success/Failure) to support visual confirmation during manual or automated triggers.
+- [ ] 7.3 **Open Gist URL Command**: Implement a new Command Palette entry to quickly open the configured Gist URL in the browser.
+- [ ] 7.4 **CLI Sync Status Feedback**: Implement a `sync-result.json` file or enhanced logging in the plugin folder to allow CLI scripts to verify the success of a background sync.
+- [ ] 7.5 **Gist Export Logic (Critical Fix)**: Actually implement the Gist upload logic in a new `GistClient.ts` (currently settings exist but the functional code is missing).

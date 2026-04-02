@@ -3,6 +3,7 @@ import { Settings, DEFAULT_SETTINGS } from "./Model/Settings";
 import { SettingsManager } from "./SettingsManager";
 import { IcalService } from "./Service/IcalService";
 import { FileClient } from "./FileClient";
+import { GistClient } from "./GistClient";
 import { TaskIndex } from "./Service/TaskIndex";
 import { TaskFinder } from "./Service/TaskFinder";
 import { logger } from "./Logger";
@@ -13,6 +14,7 @@ export default class ObsidianIcalPlugin extends Plugin {
 	settingsManager: SettingsManager;
 	icalService: IcalService;
 	fileClient: FileClient;
+	gistClient: GistClient;
 	taskIndex: TaskIndex;
 	taskFinder: TaskFinder;
 	lastSyncStatus: string = "Never synced";
@@ -27,16 +29,17 @@ export default class ObsidianIcalPlugin extends Plugin {
 		this.taskFinder = new TaskFinder(this.app.vault);
 		this.icalService = new IcalService();
 		this.fileClient = new FileClient(this.app.vault);
+		this.gistClient = new GistClient(this.settings);
 
 		// Initialize Task Index
 		await this.buildIndex();
 
-		// Register Vault Events for Incremental Indexing
+		// Register Vault Events
 		this.registerEvent(this.app.vault.on("modify", (file) => this.updateFileInIndex(file)));
 		this.registerEvent(this.app.vault.on("delete", (file) => this.removeFileFromIndex(file)));
 		this.registerEvent(this.app.vault.on("rename", (file, oldPath) => this.renameFileInIndex(file, oldPath)));
 
-		// Add Ribbon Icon for quick sync
+		// Add Ribbon Icon
 		this.addRibbonIcon("calendar-with-checkmark", "iCal Pro: Sync Now", async () => {
 			new Notice("iCal Pro: Starting synchronization...");
 			try {
@@ -51,12 +54,29 @@ export default class ObsidianIcalPlugin extends Plugin {
 		// Add settings tab
 		this.addSettingTab(new SettingsTab(this.app, this));
 
-		// Add command to manually save calendar
+		// Command: Save calendar
 		this.addCommand({
 			id: "save-calendar",
-			name: "Save calendar",
+			name: "Save and Sync calendar",
+			callback: async () => {
+				new Notice("iCal Pro: Syncing...");
+				await this.saveCalendar();
+				new Notice("iCal Pro: Sync done.");
+			},
+		});
+
+		// Command: Open Gist URL
+		this.addCommand({
+			id: "open-gist-url",
+			name: "Open Gist URL in browser",
 			callback: () => {
-				this.saveCalendar();
+				const { githubUsername, githubGistId, filename } = this.settings;
+				if (githubUsername && githubGistId) {
+					const url = `https://gist.github.com/${githubUsername}/${githubGistId}`;
+					window.open(url, "_blank");
+				} else {
+					new Notice("GitHub Sync not fully configured.");
+				}
 			},
 		});
 
@@ -106,7 +126,13 @@ export default class ObsidianIcalPlugin extends Plugin {
 		try {
 			const allTasks = this.taskIndex.getAllTasks();
 			const calendar = this.icalService.getCalendar(allTasks, this.settings);
+			
+			// Save locally
 			await this.fileClient.save(calendar);
+			
+			// Save to Gist
+			await this.gistClient.save(calendar);
+
 			this.lastSyncStatus = "Success";
 			this.lastSyncTime = new Date().toLocaleTimeString();
 		} catch (e) {
