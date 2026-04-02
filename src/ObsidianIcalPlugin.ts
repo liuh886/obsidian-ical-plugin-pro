@@ -4,6 +4,7 @@ import { SettingsManager } from "./SettingsManager";
 import { IcalService } from "./Service/IcalService";
 import { FileClient } from "./FileClient";
 import { logger } from "./Logger";
+import { SettingsTab } from "./SettingsTab";
 
 export default class ObsidianIcalPlugin extends Plugin {
 	settings: Settings;
@@ -12,7 +13,7 @@ export default class ObsidianIcalPlugin extends Plugin {
 	fileClient: FileClient;
 
 	async onload() {
-		console.log("Loading Obsidian iCal Plugin");
+		console.log("Loading Obsidian iCal Plugin Pro");
 
 		await this.loadSettings();
 
@@ -21,7 +22,7 @@ export default class ObsidianIcalPlugin extends Plugin {
 		this.fileClient = new FileClient(this.app.vault);
 
 		// Add settings tab
-		// this.addSettingTab(new ObsidianIcalSettingTab(this.app, this));
+		this.addSettingTab(new SettingsTab(this.app, this));
 
 		// Register periodic save if enabled
 		if (this.settings.isPeriodicSaveEnabled) {

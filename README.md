@@ -1,79 +1,58 @@
-# Obsidian iCal Plugin Pro
+# iCal Pro for Obsidian
 
-A highly performant, standard-compliant iCalendar (.ics) synchronization plugin for Obsidian. 
+**Turn your Obsidian tasks into a live, synced calendar.**
 
-Seamlessly turn your Obsidian tasks into calendar events that perfectly sync with **Google Calendar, Apple Calendar, and Outlook**—without sacrificing your privacy or your vault's performance.
-
-**Forked and modernized from the original [obsidian-ical-plugin](https://github.com/andrewbrereton/obsidian-ical-plugin) by Andrew Brereton.**
+iCal Pro is a powerful synchronization engine that automatically scans your Obsidian vault for tasks with dates and generates a standard iCalendar (`.ics`) file. You can subscribe to this file in **Google Calendar, Apple Calendar, Outlook**, or any other calendar app to see your Obsidian schedule alongside your other commitments.
 
 ---
 
-## 🌟 Why "Pro"? (Core Features)
+## 🚀 What can iCal Pro do for you?
 
-This "Pro" version was completely re-architected to address the pain points of power users and professionals with massive vaults:
-
-1. **🚀 Incremental Indexing (O(1) Cache)**
-   - *The Problem:* The original plugin scanned your entire vault every time it generated a calendar, causing severe lag and freezing on large vaults.
-   - *The Pro Solution:* Uses a memory-resident `TaskIndex` that listens to Obsidian's native file modification events. It only updates the tasks of the file you just edited. Generating the `.ics` is now instantaneous, even with 10,000+ files.
-
-2. **🌍 Timezone Awareness & "Floating Time"**
-   - Generates dates in standard "Floating Time" (local time) and embeds the `X-WR-TIMEZONE` header matching your system.
-   - No more tasks unexpectedly shifting by 8 hours when imported into Google Calendar!
-
-3. **📝 Multi-line Task Descriptions**
-   - Going beyond the single line `- [ ] Task`.
-   - Any quotes (`>`), lists (`-`, `*`), or indented text immediately following a task will be intelligently captured and injected into the calendar event's `DESCRIPTION`. 
-   - Perfect for attaching flight details, MRT routes, or meeting notes directly beneath your task.
-
-4. **🔗 Clean Links & RFC 5545 Compliance**
-   - Removed the deprecated `ALTREP` parameter that broke links in Google Calendar.
-   - `obsidian://` deep links are now safely placed in the `LOCATION` and `DESCRIPTION` fields, ensuring you can click straight from your phone's calendar back into your Obsidian vault.
-   - Uses an industrial-grade `ICalBuilder` to ensure strict RFC 5545 compliance (75-character line folding, CRLF, strict escaping).
+- **📅 Automated Scheduling**: Simply add a date to any task in Obsidian (e.g., `- [ ] My meeting 2026-05-08`), and it instantly appears in your external calendar.
+- **🔗 Deep Linking**: Every calendar event includes a direct `obsidian://` link. One click on your phone or desktop calendar takes you straight back to the exact note in your vault.
+- **📝 Rich Context**: Unlike basic sync tools, iCal Pro captures the notes, quotes, and sub-items listed *under* your task and includes them in the calendar event's description.
+- **⚡ Built for Scale**: Whether you have 10 notes or 10,000, iCal Pro’s memory-resident `TaskIndex` (Incremental Indexing) ensures your calendar updates instantly by only re-parsing modified files, never slowing down your Obsidian experience.
+- **🛡️ RFC 5545 Compliant**: Uses a custom-built `ICalBuilder` that strictly adheres to the iCalendar standard, including mandatory 75-character line folding, CRLF line endings, and proper character escaping for maximum reliability across all calendar clients.
+- **🌍 Travel-Ready**: Built-in timezone intelligence ensures your events stay pinned to the correct local time, no matter where you are in the world.
 
 ---
 
-## 🛠️ Setup & Usage
+## 🛠️ How it works
 
-### 1. Installation
-*(Currently in Beta - Manual Installation)*
-1. Download the latest release from the [Releases](https://github.com/liuh886/obsidian-ical-plugin-pro/releases) page.
-2. Unzip the contents (`main.js`, `manifest.json`, `styles.css`) into your `<vault>/.obsidian/plugins/obsidian-ical-plugin-pro/` folder.
-3. Reload Obsidian and enable the plugin in **Community Plugins**.
+### 1. Tagging Tasks with Dates
+iCal Pro looks for tasks containing dates in the `YYYY-MM-DD` format. It also supports the "Tasks" plugin style emojis:
+- `🛫 2026-05-08` (Start Date)
+- `⏳ 2026-05-08` (Scheduled Date)
+- `📅 2026-05-08` (Due Date)
 
-### 2. Configuration
-Go to the plugin settings in Obsidian:
-- **Target Directory:** Choose a specific folder (e.g., `100_Logs/daily`) to scan for tasks, or leave as `/` for the whole vault.
-- **Save Destinations:** Choose whether to save the `.ics` file to your local disk or sync it automatically to a GitHub Gist.
-- **Multiple Dates Priority:** If a task has a Start (`🛫`), Scheduled (`⏳`), and Due (`📅`) date, choose which one takes priority, or generate multiple events.
+### 2. Capturing Descriptions
+If you provide additional context under a task using blockquotes (`>`) or indented lists, iCal Pro will include that text in the "Notes/Description" field of the calendar event.
 
-### 3. Syncing with Calendar Apps
-
-#### Google Calendar
-1. If saving to Gist: Copy the Gist URL provided in the plugin settings.
-2. Go to Google Calendar on the web -> Settings -> **Add calendar** -> **From URL**.
-3. Paste the URL. It will automatically fetch your tasks periodically.
-
-#### Apple Calendar
-1. Open Calendar on your Mac.
-2. File -> **New Calendar Subscription...**
-3. Paste your `.ics` URL or file path.
+### 3. Syncing to your Devices
+Choose how you want to host your calendar:
+- **Local File**: Save the `.ics` to your disk (best for local-only use or third-party sync like iCloud/Dropbox).
+- **GitHub Gist**: Automatically push your calendar to a private or public Gist. This provides a permanent URL that Google Calendar or Apple Calendar can subscribe to from anywhere.
 
 ---
 
-## 💻 For Developers
+## ⚙️ Getting Started
 
-This project is built with modern TypeScript and uses `esbuild`.
+1. **Install**: Download the latest release and place it in your `.obsidian/plugins/` folder.
+2. **Configure**: Open Obsidian Settings -> **iCal Pro**.
+3. **Setup GitHub Sync**:
+   - Create a **[GitHub Personal Access Token](https://github.com/settings/tokens?type=beta)** with `Gist` permissions.
+   - Create a new Gist at **[gist.github.com](https://gist.github.com/)**.
+   - Copy the **Gist ID** from the URL and paste it into the plugin settings.
+4. **Subscribe**: Once configured, copy the generated **Subscription URL** from the settings page and add it to your calendar app (Google Calendar -> Add by URL, or Apple Calendar -> New Subscription).
 
-```bash
-# Install dependencies
-npm install
+---
 
-# Build for production
-npm run build
+## 🛡️ Privacy & Security
+Your data never leaves your control. The plugin only scans your local vault. If you use the Gist sync feature, your data is pushed only to your own GitHub account.
 
-# Build in dev mode (watch)
-npm run dev
-```
+---
 
-## 📄 License
-MIT License. Original concept and codebase by Andrew Brereton. Modernized, re-architected, and maintained by [liuh886](https://github.com/liuh886).
+## 📄 Attribution & Credits
+This is an enhanced "Pro" version of the original [obsidian-ical-plugin](https://github.com/andrewbrereton/obsidian-ical-plugin) by Andrew Brereton. It has been re-architected for performance, standard compliance, and rich-text support by [liuh886](https://github.com/liuh886).
+
+Licensed under [MIT](./LICENSE).

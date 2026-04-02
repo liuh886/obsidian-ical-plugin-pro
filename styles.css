@@ -1,0 +1,22 @@
+.ical-url-container {
+    background-color: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    padding: 12px;
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ical-url-text {
+    word-break: break-all;
+    font-family: var(--font-monospace);
+    font-size: 0.9em;
+    color: var(--text-accent);
+    user-select: all;
+}
+
+.ical-url-container button {
+    align-self: flex-start;
+}
