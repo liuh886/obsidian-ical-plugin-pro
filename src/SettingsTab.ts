@@ -19,7 +19,7 @@ export class SettingsTab extends PluginSettingTab {
 		headerText.createEl("h2", { text: "iCal Pro" });
 		headerText.createEl("span", { text: "v" + this.plugin.manifest.version, cls: "ical-pro-version" });
 
-		// --- Live URL Card (The "Status" Area) ---
+		// --- Live URL Card ---
 		const statusCard = containerEl.createDiv({ cls: "ical-pro-status-card" });
 		const statusTitle = statusCard.createDiv({ cls: "ical-pro-card-title" });
 		setIcon(statusTitle, "link");
@@ -113,6 +113,18 @@ export class SettingsTab extends PluginSettingTab {
 
 		// --- Section: Rules ---
 		this.addHeader(containerEl, "list-checks", "Task & Date Rules");
+
+		new Setting(containerEl)
+			.setName("Day Planner Mode")
+			.setDesc("When enabled, the plugin will look for dates in file headers (useful for Day Planner users). When disabled, only dates inside task lines will be used.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.isDayPlannerPluginFormatEnabled)
+					.onChange(async (value) => {
+						this.plugin.settings.isDayPlannerPluginFormatEnabled = value;
+						await this.plugin.saveSettings();
+					})
+			);
 
 		new Setting(containerEl)
 			.setName("Ignore completed tasks")

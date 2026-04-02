@@ -33,7 +33,7 @@ __export(main_exports, {
 });
 
 // src/ObsidianIcalPlugin.ts
-var import_obsidian4 = require("obsidian");
+var import_obsidian6 = require("obsidian");
 
 // src/Model/Settings.ts
 var DEFAULT_SETTINGS = {
@@ -66,6 +66,222 @@ var DEFAULT_SETTINGS = {
   isIncludeLinkInDescription: false,
   secretKey: ""
 };
+
+// src/Service/ICalBuilder.ts
+var ICalBuilder = class {
+  constructor() {
+    this.lines = [];
+    this.lines.push("BEGIN:VCALENDAR");
+    this.lines.push("VERSION:2.0");
+    this.lines.push("PRODID:-//liuh886//obsidian-ical-plugin-pro v2.1.0//EN");
+    this.lines.push("CALSCALE:GREGORIAN");
+  }
+  setCalendarName(name) {
+    this.lines.push(`X-WR-CALNAME:${this.escapeText(name)}`);
+    this.lines.push(`NAME:${this.escapeText(name)}`);
+    return this;
+  }
+  setTimezone(tz) {
+    this.lines.push(`X-WR-TIMEZONE:${tz}`);
+    return this;
+  }
+  setLastUpdated(date) {
+    const formattedDate = date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+    this.lines.push(`X-WR-DATE:${formattedDate}`);
+    this.lines.push(`X-WR-CALDESC:Last updated at ${date.toLocaleString()}`);
+    return this;
+  }
+  setRefreshInterval(minutes) {
+    this.lines.push(`X-PUBLISHED-TTL:PT${minutes}M`);
+    this.lines.push(`REFRESH-INTERVAL;VALUE=DURATION:PT${minutes}M`);
+    return this;
+  }
+  addProperty(key, value) {
+    this.lines.push(`${key}:${this.escapeText(value)}`);
+    return this;
+  }
+  beginEvent() {
+    this.lines.push("BEGIN:VEVENT");
+    return this;
+  }
+  endEvent() {
+    this.lines.push("END:VEVENT");
+    return this;
+  }
+  beginToDo() {
+    this.lines.push("BEGIN:VTODO");
+    return this;
+  }
+  endToDo() {
+    this.lines.push("END:VTODO");
+    return this;
+  }
+  addEventProperty(key, value, escape = true) {
+    const escapedValue = escape ? this.escapeText(value) : value;
+    this.lines.push(`${key}:${escapedValue}`);
+    return this;
+  }
+  build() {
+    this.lines.push("END:VCALENDAR");
+    return this.lines.map((line) => this.foldLine(line)).join("\r\n") + "\r\n";
+  }
+  escapeText(text) {
+    return text.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n").replace(/\r/g, "");
+  }
+  foldLine(line) {
+    if (line.length <= 75)
+      return line;
+    let result = "";
+    let currentLine = line;
+    while (currentLine.length > 75) {
+      result += currentLine.substring(0, 75) + "\r\n ";
+      currentLine = currentLine.substring(75);
+    }
+    result += currentLine;
+    return result;
+  }
+};
+
+// src/Service/IcalService.ts
+var IcalService = class {
+  getCalendar(tasks, settings) {
+    const builder = new ICalBuilder();
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    builder.setCalendarName("Obsidian Calendar").setTimezone(timezone).setLastUpdated(new Date()).setRefreshInterval(settings.periodicSaveInterval || 15);
+    const includeEvents = settings.includeEventsOrTodos === "EventsAndTodos" || settings.includeEventsOrTodos === "EventsOnly";
+    const includeTodos = settings.includeEventsOrTodos === "EventsAndTodos" || settings.includeEventsOrTodos === "TodosOnly";
+    if (includeEvents) {
+      this.addEventsToBuilder(tasks, settings, builder);
+    }
+    if (includeTodos) {
+      this.addToDosToBuilder(tasks, settings, builder);
+    }
+    return builder.build();
+  }
+  addEventsToBuilder(tasks, settings, builder) {
+    tasks.forEach((task) => {
+      this.addEventToBuilder(task, null, "", settings, builder);
+    });
+  }
+  addEventToBuilder(task, date, prependSummary, settings, builder) {
+    if (task.hasAnyDate() === false) {
+      return;
+    }
+    if (date === null) {
+      switch (settings.howToProcessMultipleDates) {
+        case "PreferStartDate":
+          builder.beginEvent();
+          this.addEventCoreProperties(task, builder);
+          if (task.hasA("Start")) {
+            builder.addEventProperty("DTSTART", task.getDate("Start", "YYYYMMDD"), false);
+          } else if (task.hasA("Due")) {
+            builder.addEventProperty("DTSTART", task.getDate("Due", "YYYYMMDD"), false);
+          } else if (task.hasA("TimeStart") && task.hasA("TimeEnd")) {
+            builder.addEventProperty("DTSTART", task.getDate("TimeStart", "YYYYMMDD[T]HHmmss"), false);
+            builder.addEventProperty("DTEND", task.getDate("TimeEnd", "YYYYMMDD[T]HHmmss"), false);
+          } else {
+            builder.addEventProperty("DTSTART", task.getDate(null, "YYYYMMDD"), false);
+          }
+          this.addEventCommonProperties(task, prependSummary, builder);
+          builder.endEvent();
+          break;
+        case "CreateMultipleEvents":
+          if (task.hasA("Start")) {
+            builder.beginEvent();
+            this.addEventCoreProperties(task, builder);
+            builder.addEventProperty("DTSTART", task.getDate("Start", "YYYYMMDD"), false);
+            this.addEventCommonProperties(task, "\u{1F6EB} ", builder);
+            builder.endEvent();
+          }
+          if (task.hasA("Scheduled")) {
+            builder.beginEvent();
+            this.addEventCoreProperties(task, builder);
+            builder.addEventProperty("DTSTART", task.getDate("Scheduled", "YYYYMMDD"), false);
+            this.addEventCommonProperties(task, "\u23F3 ", builder);
+            builder.endEvent();
+          }
+          if (task.hasA("Due")) {
+            builder.beginEvent();
+            this.addEventCoreProperties(task, builder);
+            builder.addEventProperty("DTSTART", task.getDate("Due", "YYYYMMDD"), false);
+            this.addEventCommonProperties(task, "\u{1F4C5} ", builder);
+            builder.endEvent();
+          }
+          if (!task.hasA("Start") && !task.hasA("Scheduled") && !task.hasA("Due")) {
+            builder.beginEvent();
+            this.addEventCoreProperties(task, builder);
+            builder.addEventProperty("DTSTART", task.getDate(null, "YYYYMMDD"), false);
+            this.addEventCommonProperties(task, "", builder);
+            builder.endEvent();
+          }
+          break;
+        case "PreferDueDate":
+        default:
+          builder.beginEvent();
+          this.addEventCoreProperties(task, builder);
+          if (task.hasA("Start") && task.hasA("Due")) {
+            builder.addEventProperty("DTSTART", task.getDate("Start", "YYYYMMDDTHHmmss"), false);
+            builder.addEventProperty("DTEND", task.getDate("Due", "YYYYMMDDTHHmmss"), false);
+          } else if (task.hasA("Due")) {
+            builder.addEventProperty("DTSTART", task.getDate("Due", "YYYYMMDD"), false);
+          } else if (task.hasA("Start")) {
+            builder.addEventProperty("DTSTART", task.getDate("Start", "YYYYMMDD"), false);
+          } else if (task.hasA("TimeStart") && task.hasA("TimeEnd")) {
+            builder.addEventProperty("DTSTART", task.getDate("TimeStart", "YYYYMMDD[T]HHmmss"), false);
+            builder.addEventProperty("DTEND", task.getDate("TimeEnd", "YYYYMMDD[T]HHmmss"), false);
+          } else {
+            builder.addEventProperty("DTSTART", task.getDate(null, "YYYYMMDD"), false);
+          }
+          this.addEventCommonProperties(task, prependSummary, builder);
+          builder.endEvent();
+          break;
+      }
+    } else {
+      builder.beginEvent();
+      this.addEventCoreProperties(task, builder);
+      builder.addEventProperty("DTSTART", date, false);
+      this.addEventCommonProperties(task, prependSummary, builder);
+      builder.endEvent();
+    }
+  }
+  addEventCoreProperties(task, builder) {
+    builder.addEventProperty("UID", task.getId(), false);
+    builder.addEventProperty("DTSTAMP", task.getDate(null, "YYYYMMDDTHHmmss"), false);
+  }
+  addEventCommonProperties(task, prependSummary, builder) {
+    builder.addEventProperty("SUMMARY", prependSummary + task.getSummary());
+    const body = task.getBody();
+    if (body) {
+      builder.addEventProperty("DESCRIPTION", body);
+    }
+    builder.addEventProperty("LOCATION", task.getLocation());
+  }
+  addToDosToBuilder(tasks, settings, builder) {
+    tasks.forEach((task) => {
+      if (settings.isOnlyTasksWithoutDatesAreTodos && task.hasAnyDate()) {
+        return;
+      }
+      builder.beginToDo();
+      builder.addEventProperty("UID", task.getId(), false);
+      builder.addEventProperty("SUMMARY", task.getSummary());
+      if (task.hasAnyDate()) {
+        builder.addEventProperty("DTSTAMP", task.getDate(null, "YYYYMMDDTHHmmss"), false);
+      }
+      const body = task.getBody();
+      if (body) {
+        builder.addEventProperty("DESCRIPTION", body);
+      }
+      builder.addEventProperty("LOCATION", task.getLocation());
+      if (task.hasA("Due")) {
+        builder.addEventProperty("DUE;VALUE=DATE", task.getDate("Due", "YYYYMMDD"), false);
+      }
+      builder.endToDo();
+    });
+  }
+};
+
+// src/FileClient.ts
+var import_obsidian2 = require("obsidian");
 
 // src/Logger.ts
 var import_obsidian = require("obsidian");
@@ -317,221 +533,7 @@ var SettingsManager = class {
   }
 };
 
-// src/Service/ICalBuilder.ts
-var ICalBuilder = class {
-  constructor() {
-    this.lines = [];
-    this.lines.push("BEGIN:VCALENDAR");
-    this.lines.push("VERSION:2.0");
-    this.lines.push("PRODID:-//liuh886//obsidian-ical-plugin-pro v2.1.0//EN");
-    this.lines.push("CALSCALE:GREGORIAN");
-  }
-  setCalendarName(name) {
-    this.lines.push(`X-WR-CALNAME:${this.escapeText(name)}`);
-    this.lines.push(`NAME:${this.escapeText(name)}`);
-    return this;
-  }
-  setTimezone(tz) {
-    this.lines.push(`X-WR-TIMEZONE:${tz}`);
-    return this;
-  }
-  setLastUpdated(date) {
-    const formattedDate = date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-    this.lines.push(`X-WR-DATE:${formattedDate}`);
-    this.lines.push(`X-WR-CALDESC:Last updated at ${date.toLocaleString()}`);
-    return this;
-  }
-  setRefreshInterval(minutes) {
-    this.lines.push(`X-PUBLISHED-TTL:PT${minutes}M`);
-    this.lines.push(`REFRESH-INTERVAL;VALUE=DURATION:PT${minutes}M`);
-    return this;
-  }
-  addProperty(key, value) {
-    this.lines.push(`${key}:${this.escapeText(value)}`);
-    return this;
-  }
-  beginEvent() {
-    this.lines.push("BEGIN:VEVENT");
-    return this;
-  }
-  endEvent() {
-    this.lines.push("END:VEVENT");
-    return this;
-  }
-  beginToDo() {
-    this.lines.push("BEGIN:VTODO");
-    return this;
-  }
-  endToDo() {
-    this.lines.push("END:VTODO");
-    return this;
-  }
-  addEventProperty(key, value, escape = true) {
-    const escapedValue = escape ? this.escapeText(value) : value;
-    this.lines.push(`${key}:${escapedValue}`);
-    return this;
-  }
-  build() {
-    this.lines.push("END:VCALENDAR");
-    return this.lines.map((line) => this.foldLine(line)).join("\r\n") + "\r\n";
-  }
-  escapeText(text) {
-    return text.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n").replace(/\r/g, "");
-  }
-  foldLine(line) {
-    if (line.length <= 75)
-      return line;
-    let result = "";
-    let currentLine = line;
-    while (currentLine.length > 75) {
-      result += currentLine.substring(0, 75) + "\r\n ";
-      currentLine = currentLine.substring(75);
-    }
-    result += currentLine;
-    return result;
-  }
-};
-
-// src/Service/IcalService.ts
-var IcalService = class {
-  getCalendar(tasks, settings) {
-    const builder = new ICalBuilder();
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    builder.setCalendarName("Obsidian Calendar").setTimezone(timezone).setLastUpdated(new Date()).setRefreshInterval(settings.periodicSaveInterval || 15);
-    const includeEvents = settings.includeEventsOrTodos === "EventsAndTodos" || settings.includeEventsOrTodos === "EventsOnly";
-    const includeTodos = settings.includeEventsOrTodos === "EventsAndTodos" || settings.includeEventsOrTodos === "TodosOnly";
-    if (includeEvents) {
-      this.addEventsToBuilder(tasks, settings, builder);
-    }
-    if (includeTodos) {
-      this.addToDosToBuilder(tasks, settings, builder);
-    }
-    return builder.build();
-  }
-  addEventsToBuilder(tasks, settings, builder) {
-    tasks.forEach((task) => {
-      this.addEventToBuilder(task, null, "", settings, builder);
-    });
-  }
-  addEventToBuilder(task, date, prependSummary, settings, builder) {
-    if (task.hasAnyDate() === false) {
-      return;
-    }
-    if (date === null) {
-      switch (settings.howToProcessMultipleDates) {
-        case "PreferStartDate":
-          builder.beginEvent();
-          this.addEventCoreProperties(task, builder);
-          if (task.hasA("Start")) {
-            builder.addEventProperty("DTSTART", task.getDate("Start", "YYYYMMDD"), false);
-          } else if (task.hasA("Due")) {
-            builder.addEventProperty("DTSTART", task.getDate("Due", "YYYYMMDD"), false);
-          } else if (task.hasA("TimeStart") && task.hasA("TimeEnd")) {
-            builder.addEventProperty("DTSTART", task.getDate("TimeStart", "YYYYMMDD[T]HHmmss"), false);
-            builder.addEventProperty("DTEND", task.getDate("TimeEnd", "YYYYMMDD[T]HHmmss"), false);
-          } else {
-            builder.addEventProperty("DTSTART", task.getDate(null, "YYYYMMDD"), false);
-          }
-          this.addEventCommonProperties(task, prependSummary, builder);
-          builder.endEvent();
-          break;
-        case "CreateMultipleEvents":
-          if (task.hasA("Start")) {
-            builder.beginEvent();
-            this.addEventCoreProperties(task, builder);
-            builder.addEventProperty("DTSTART", task.getDate("Start", "YYYYMMDD"), false);
-            this.addEventCommonProperties(task, "\u{1F6EB} ", builder);
-            builder.endEvent();
-          }
-          if (task.hasA("Scheduled")) {
-            builder.beginEvent();
-            this.addEventCoreProperties(task, builder);
-            builder.addEventProperty("DTSTART", task.getDate("Scheduled", "YYYYMMDD"), false);
-            this.addEventCommonProperties(task, "\u23F3 ", builder);
-            builder.endEvent();
-          }
-          if (task.hasA("Due")) {
-            builder.beginEvent();
-            this.addEventCoreProperties(task, builder);
-            builder.addEventProperty("DTSTART", task.getDate("Due", "YYYYMMDD"), false);
-            this.addEventCommonProperties(task, "\u{1F4C5} ", builder);
-            builder.endEvent();
-          }
-          if (!task.hasA("Start") && !task.hasA("Scheduled") && !task.hasA("Due")) {
-            builder.beginEvent();
-            this.addEventCoreProperties(task, builder);
-            builder.addEventProperty("DTSTART", task.getDate(null, "YYYYMMDD"), false);
-            this.addEventCommonProperties(task, "", builder);
-            builder.endEvent();
-          }
-          break;
-        case "PreferDueDate":
-        default:
-          builder.beginEvent();
-          this.addEventCoreProperties(task, builder);
-          if (task.hasA("Start") && task.hasA("Due")) {
-            builder.addEventProperty("DTSTART", task.getDate("Start", "YYYYMMDDTHHmmss"), false);
-            builder.addEventProperty("DTEND", task.getDate("Due", "YYYYMMDDTHHmmss"), false);
-          } else if (task.hasA("Due")) {
-            builder.addEventProperty("DTSTART", task.getDate("Due", "YYYYMMDD"), false);
-          } else if (task.hasA("Start")) {
-            builder.addEventProperty("DTSTART", task.getDate("Start", "YYYYMMDD"), false);
-          } else if (task.hasA("TimeStart") && task.hasA("TimeEnd")) {
-            builder.addEventProperty("DTSTART", task.getDate("TimeStart", "YYYYMMDD[T]HHmmss"), false);
-            builder.addEventProperty("DTEND", task.getDate("TimeEnd", "YYYYMMDD[T]HHmmss"), false);
-          } else {
-            builder.addEventProperty("DTSTART", task.getDate(null, "YYYYMMDD"), false);
-          }
-          this.addEventCommonProperties(task, prependSummary, builder);
-          builder.endEvent();
-          break;
-      }
-    } else {
-      builder.beginEvent();
-      this.addEventCoreProperties(task, builder);
-      builder.addEventProperty("DTSTART", date, false);
-      this.addEventCommonProperties(task, prependSummary, builder);
-      builder.endEvent();
-    }
-  }
-  addEventCoreProperties(task, builder) {
-    builder.addEventProperty("UID", task.getId(), false);
-    builder.addEventProperty("DTSTAMP", task.getDate(null, "YYYYMMDDTHHmmss"), false);
-  }
-  addEventCommonProperties(task, prependSummary, builder) {
-    builder.addEventProperty("SUMMARY", prependSummary + task.getSummary());
-    const body = task.getBody();
-    if (body) {
-      builder.addEventProperty("DESCRIPTION", body);
-    }
-    builder.addEventProperty("LOCATION", task.getLocation());
-  }
-  addToDosToBuilder(tasks, settings, builder) {
-    tasks.forEach((task) => {
-      if (settings.isOnlyTasksWithoutDatesAreTodos && task.hasAnyDate()) {
-        return;
-      }
-      builder.beginToDo();
-      builder.addEventProperty("UID", task.getId(), false);
-      builder.addEventProperty("SUMMARY", task.getSummary());
-      if (task.hasAnyDate()) {
-        builder.addEventProperty("DTSTAMP", task.getDate(null, "YYYYMMDDTHHmmss"), false);
-      }
-      const body = task.getBody();
-      if (body) {
-        builder.addEventProperty("DESCRIPTION", body);
-      }
-      builder.addEventProperty("LOCATION", task.getLocation());
-      if (task.hasA("Due")) {
-        builder.addEventProperty("DUE;VALUE=DATE", task.getDate("Due", "YYYYMMDD"), false);
-      }
-      builder.endToDo();
-    });
-  }
-};
-
 // src/FileClient.ts
-var import_obsidian2 = require("obsidian");
 var FileClient = class {
   constructor(vault) {
     this.vault = vault;
@@ -550,9 +552,199 @@ var FileClient = class {
   }
 };
 
-// src/SettingsTab.ts
+// src/Service/TaskIndex.ts
+var TaskIndex = class {
+  constructor() {
+    this.fileTasks = /* @__PURE__ */ new Map();
+  }
+  updateTasksForFile(path, tasks) {
+    if (tasks.length === 0) {
+      this.fileTasks.delete(path);
+    } else {
+      this.fileTasks.set(path, tasks);
+    }
+  }
+  removeFile(path) {
+    this.fileTasks.delete(path);
+  }
+  getAllTasks() {
+    const allTasks = [];
+    for (const tasks of this.fileTasks.values()) {
+      allTasks.push(...tasks);
+    }
+    return allTasks;
+  }
+  clear() {
+    this.fileTasks.clear();
+  }
+};
+
+// src/Service/TaskFactory.ts
+var import_obsidian4 = require("obsidian");
+
+// src/Model/Task.ts
 var import_obsidian3 = require("obsidian");
-var SettingsTab = class extends import_obsidian3.PluginSettingTab {
+var Task = class {
+  constructor(status, dates, summary, fileUri, body = "") {
+    this.status = status;
+    this.dates = dates;
+    this.summary = summary;
+    this.fileUri = fileUri;
+    this.body = body;
+  }
+  getId() {
+    return crypto.randomUUID();
+  }
+  hasA(taskDateName) {
+    return this.dates.some((taskDate) => {
+      return taskDate.name === taskDateName;
+    });
+  }
+  hasAnyDate() {
+    return this.dates.length > 0;
+  }
+  getDate(taskDateName, format) {
+    if (this.dates.length === 0) {
+      return "";
+    }
+    if (taskDateName === null) {
+      taskDateName = this.dates[0].name;
+    }
+    const matchingTaskDate = this.dates.find((taskDate) => {
+      if (taskDate.name === taskDateName) {
+        return taskDate.date;
+      }
+    });
+    if (typeof matchingTaskDate === "undefined") {
+      return "";
+    }
+    return (0, import_obsidian3.moment)(matchingTaskDate.date).format(format);
+  }
+  getSummary() {
+    const summary = this.summary.replace(/\\/gm, "\\\\").replace(/\r?\n/gm, "\\n").replace(/;/gm, "\\;").replace(/,/gm, "\\,");
+    return summary;
+  }
+  getBody() {
+    return this.body.replace(/\\/gm, "\\\\").replace(/\r?\n/gm, "\\n").replace(/;/gm, "\\;").replace(/,/gm, "\\,");
+  }
+  getLocation() {
+    return this.fileUri;
+  }
+};
+
+// src/Service/TaskFactory.ts
+function createTaskFromLine(line, fileUri, dateOverride, body, settings) {
+  const taskRegex = /^(\s*[*+-]\s*\[)(.)(\]\s*)(.*)$/;
+  const match = line.match(taskRegex);
+  if (!match)
+    return null;
+  const statusChar = match[2];
+  const status = statusChar === "x" || statusChar === "X" ? "Done" /* Done */ : "Todo" /* Todo */;
+  let summary = match[4].trim();
+  summary = summary.replace(/\*\*|__/g, "").replace(/\*|_/g, "");
+  const dates = [];
+  const datePatterns = [
+    { name: "Due", emoji: "\u{1F4C5}" },
+    { name: "Scheduled", emoji: "\u23F3" },
+    { name: "Start", emoji: "\u{1F6EB}" },
+    { name: "Completion", emoji: "\u2705" }
+  ];
+  for (const pattern of datePatterns) {
+    const regex = new RegExp(`${pattern.emoji}\\s*(\\d{4}-\\d{2}-\\d{2})`, "u");
+    const dateMatch = summary.match(regex);
+    if (dateMatch) {
+      const date = (0, import_obsidian4.moment)(dateMatch[1], "YYYY-MM-DD").toDate();
+      dates.push({ name: pattern.name, date });
+      summary = summary.replace(dateMatch[0], "").trim();
+    }
+  }
+  if (dateOverride) {
+    dates.push({ name: "Due", date: dateOverride });
+  }
+  if (dates.length === 0) {
+    const genericDateMatch = summary.match(/(\d{4}-\d{2}-\d{2})/);
+    if (genericDateMatch) {
+      const date = (0, import_obsidian4.moment)(genericDateMatch[1], "YYYY-MM-DD").toDate();
+      dates.push({ name: "Due", date });
+      summary = summary.replace(genericDateMatch[0], "").trim();
+    }
+  }
+  if (dates.length === 0)
+    return null;
+  return new Task(status, dates, summary, fileUri, body);
+}
+
+// src/Service/TaskFinder.ts
+var TaskFinder = class {
+  constructor(vault) {
+    this.vault = vault;
+  }
+  async findTasks(file, listItemsCache, headings, settings) {
+    var _a;
+    const fileCachedContent = await this.vault.cachedRead(file);
+    const lines = fileCachedContent.split("\n");
+    const fileUri = "obsidian://open?vault=" + file.vault.getName() + "&file=" + file.path;
+    const isTaskLine = (line) => /(\*|-)\s*\[.?]\s*/.test(line);
+    const taskPositions = listItemsCache.map((item) => item.position.start.line).filter((lineNo) => isTaskLine(lines[lineNo]));
+    const results = [];
+    for (let i = 0; i < taskPositions.length; i++) {
+      const startLine = taskPositions[i];
+      const markdownLine = lines[startLine];
+      let bodyLines = [];
+      const nextTaskLine = i + 1 < taskPositions.length ? taskPositions[i + 1] : lines.length;
+      for (let j = startLine + 1; j < nextTaskLine; j++) {
+        const currentLine = lines[j];
+        const trimmed = currentLine.trim();
+        if (trimmed === "" && j > startLine + 1)
+          break;
+        if (trimmed === "")
+          continue;
+        if (trimmed.startsWith(">") || trimmed.startsWith("-") || trimmed.startsWith("*") || /^\s+/.test(currentLine)) {
+          bodyLines.push(trimmed);
+        } else {
+          break;
+        }
+      }
+      const body = bodyLines.join("\\n");
+      let dateOverride = null;
+      if (settings.isDayPlannerPluginFormatEnabled && headings) {
+        if (this.hasTimes(markdownLine)) {
+          const heading = headings.getHeadingForMarkdownLineNumber(startLine);
+          dateOverride = (_a = heading == null ? void 0 : heading.getDate) != null ? _a : null;
+        }
+      }
+      if (settings.isIncludeTasksWithTags) {
+        if (!this.hasTag(markdownLine, settings.includeTasksWithTags)) {
+          continue;
+        }
+      }
+      if (settings.isExcludeTasksWithTags) {
+        if (this.hasTag(markdownLine, settings.excludeTasksWithTags)) {
+          continue;
+        }
+      }
+      const task = createTaskFromLine(markdownLine, fileUri, dateOverride, body, settings);
+      if (task) {
+        results.push(task);
+      }
+    }
+    return results;
+  }
+  hasTimes(line) {
+    const timeRegExp = /\b((?<!\d{4}-\d{2}-)\d{1,2}:(\d{2})(?::\d{2})?\s*(?:[ap][m])?|(?<!\d{4}-\d{2}-)\d{1,2}\s*[ap][m])\b/gi;
+    return timeRegExp.test(line);
+  }
+  hasTag(line, tags) {
+    if (!tags.includes(" ")) {
+      return line.includes(tags);
+    }
+    return tags.split(" ").some((tag) => line.includes(tag));
+  }
+};
+
+// src/SettingsTab.ts
+var import_obsidian5 = require("obsidian");
+var SettingsTab = class extends import_obsidian5.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -560,51 +752,69 @@ var SettingsTab = class extends import_obsidian3.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: "iCal Pro Settings" });
-    new import_obsidian3.Setting(containerEl).setName("Target directory").setDesc("The folder where tasks will be scanned. Use '/' for the entire vault.").addText((text) => text.setPlaceholder("e.g., 100_Logs/daily").setValue(this.plugin.settings.rootPath).onChange(async (value) => {
-      this.plugin.settings.rootPath = (0, import_obsidian3.normalizePath)(value);
+    const header = containerEl.createDiv({ cls: "ical-pro-header" });
+    const headerText = header.createDiv({ cls: "ical-pro-header-title" });
+    headerText.createEl("h2", { text: "iCal Pro" });
+    headerText.createEl("span", { text: "v" + this.plugin.manifest.version, cls: "ical-pro-version" });
+    const statusCard = containerEl.createDiv({ cls: "ical-pro-status-card" });
+    const statusTitle = statusCard.createDiv({ cls: "ical-pro-card-title" });
+    (0, import_obsidian5.setIcon)(statusTitle, "link");
+    statusTitle.createSpan({ text: " Your Subscription URL" });
+    const urlContainer = statusCard.createDiv({ cls: "ical-url-container" });
+    this.renderUrl(urlContainer);
+    this.addHeader(containerEl, "settings", "General Settings");
+    new import_obsidian5.Setting(containerEl).setName("Target directory").setDesc("The folder where tasks will be scanned. Choose '/' for the entire vault.").addText((text) => text.setPlaceholder("e.g., 100_Logs/daily").setValue(this.plugin.settings.rootPath).onChange(async (value) => {
+      this.plugin.settings.rootPath = (0, import_obsidian5.normalizePath)(value);
       await this.plugin.saveSettings();
       this.updateUrlDisplay();
     }));
-    new import_obsidian3.Setting(containerEl).setName("File name").setDesc("The name of your generated .ics file.").addText((text) => text.setPlaceholder("obsidian").setValue(this.plugin.settings.filename).onChange(async (value) => {
+    new import_obsidian5.Setting(containerEl).setName("File name").setDesc("The name of your generated .ics file.").addText((text) => text.setPlaceholder("obsidian.ics").setValue(this.plugin.settings.filename).onChange(async (value) => {
       this.plugin.settings.filename = value;
       await this.plugin.saveSettings();
       this.updateUrlDisplay();
     }));
-    containerEl.createEl("h3", { text: "GitHub Sync Configuration" });
-    const githubDesc = containerEl.createEl("div", { cls: "setting-item-description" });
-    githubDesc.appendText("To sync your calendar online, you need a ");
-    githubDesc.createEl("a", {
-      text: "GitHub Personal Access Token",
-      href: "https://github.com/settings/tokens?type=beta"
-    });
-    githubDesc.appendText(" (with Gist permissions) and your ");
-    githubDesc.createEl("a", {
-      text: "Gist ID",
-      href: "https://gist.github.com/"
-    });
-    githubDesc.appendText(".");
-    new import_obsidian3.Setting(containerEl).setName("Personal Access Token").addText((text) => text.setPlaceholder("ghp_...").setValue(this.plugin.settings.githubPersonalAccessToken).onChange(async (value) => {
+    this.addHeader(containerEl, "cloud", "GitHub Sync Configuration");
+    const githubInfo = containerEl.createDiv({ cls: "ical-pro-info-box" });
+    (0, import_obsidian5.setIcon)(githubInfo, "info");
+    const infoText = githubInfo.createDiv();
+    infoText.createSpan({ text: "Sync your calendar online using " });
+    infoText.createEl("a", { text: "GitHub Gist", href: "https://gist.github.com/" });
+    infoText.createSpan({ text: ". Requires a " });
+    infoText.createEl("a", { text: "Personal Access Token", href: "https://github.com/settings/tokens?type=beta" });
+    infoText.createSpan({ text: " with 'Gist' scope." });
+    new import_obsidian5.Setting(containerEl).setName("GitHub Username").addText((text) => text.setPlaceholder("liuh886").setValue(this.plugin.settings.githubUsername).onChange(async (value) => {
+      this.plugin.settings.githubUsername = value;
+      await this.plugin.saveSettings();
+      this.updateUrlDisplay();
+    }));
+    new import_obsidian5.Setting(containerEl).setName("Personal Access Token").setDesc("Used to upload your .ics to GitHub.").addText((text) => text.setPlaceholder("ghp_...").setValue(this.plugin.settings.githubPersonalAccessToken).onChange(async (value) => {
       this.plugin.settings.githubPersonalAccessToken = value;
       await this.plugin.saveSettings();
     }));
-    new import_obsidian3.Setting(containerEl).setName("Gist ID").addText((text) => text.setPlaceholder("Paste your Gist ID here").setValue(this.plugin.settings.githubGistId).onChange(async (value) => {
+    new import_obsidian5.Setting(containerEl).setName("Gist ID").setDesc("The ID of the Gist where your file will be saved.").addText((text) => text.setPlaceholder("f4faaf35...").setValue(this.plugin.settings.githubGistId).onChange(async (value) => {
       this.plugin.settings.githubGistId = value;
       await this.plugin.saveSettings();
       this.updateUrlDisplay();
     }));
-    containerEl.createEl("h3", { text: "Task & Date Rules" });
-    new import_obsidian3.Setting(containerEl).setName("Ignore completed tasks").addToggle((toggle) => toggle.setValue(this.plugin.settings.ignoreCompletedTasks).onChange(async (value) => {
+    this.addHeader(containerEl, "list-checks", "Task & Date Rules");
+    new import_obsidian5.Setting(containerEl).setName("Ignore completed tasks").addToggle((toggle) => toggle.setValue(this.plugin.settings.ignoreCompletedTasks).onChange(async (value) => {
       this.plugin.settings.ignoreCompletedTasks = value;
       await this.plugin.saveSettings();
     }));
-    new import_obsidian3.Setting(containerEl).setName("Processing multiple dates").setDesc("Priority when a task has multiple dates.").addDropdown((dropdown) => dropdown.addOption("PreferDueDate", "Prefer Due Date").addOption("PreferStartDate", "Prefer Start Date").addOption("CreateMultipleEvents", "Create Multiple Events").setValue(this.plugin.settings.howToProcessMultipleDates).onChange(async (value) => {
+    new import_obsidian5.Setting(containerEl).setName("Processing multiple dates").setDesc("Priority when a task has multiple dates.").addDropdown((dropdown) => dropdown.addOption("PreferDueDate", "Prefer Due Date").addOption("PreferStartDate", "Prefer Start Date").addOption("CreateMultipleEvents", "Create Multiple Events").setValue(this.plugin.settings.howToProcessMultipleDates).onChange(async (value) => {
       this.plugin.settings.howToProcessMultipleDates = value;
       await this.plugin.saveSettings();
     }));
-    containerEl.createEl("h3", { text: "Your Subscription URL" });
-    const urlContainer = containerEl.createEl("div", { cls: "ical-url-container" });
-    this.renderUrl(urlContainer);
+    new import_obsidian5.Setting(containerEl).setName("Save Interval (Minutes)").setDesc("How often to sync in the background.").addSlider((slider) => slider.setLimits(5, 60, 5).setValue(this.plugin.settings.periodicSaveInterval).setDynamicTooltip().onChange(async (value) => {
+      this.plugin.settings.periodicSaveInterval = value;
+      await this.plugin.saveSettings();
+    }));
+  }
+  addHeader(el, icon, text) {
+    const header = el.createDiv({ cls: "ical-pro-section-header" });
+    const iconEl = header.createDiv({ cls: "ical-pro-section-icon" });
+    (0, import_obsidian5.setIcon)(iconEl, icon);
+    header.createEl("h3", { text });
   }
   updateUrlDisplay() {
     const container = this.containerEl.querySelector(".ical-url-container");
@@ -614,10 +824,11 @@ var SettingsTab = class extends import_obsidian3.PluginSettingTab {
     }
   }
   renderUrl(container) {
+    const username = this.plugin.settings.githubUsername;
     const gistId = this.plugin.settings.githubGistId;
-    const filename = this.plugin.settings.filename || "obsidian";
-    if (gistId) {
-      const url = `https://gist.githubusercontent.com/raw/${gistId}/${filename}.ics`;
+    let filename = this.plugin.settings.filename || "obsidian.ics";
+    if (username && gistId) {
+      const url = `https://gist.githubusercontent.com/${username}/${gistId}/raw/${filename}`;
       container.createEl("code", { text: url, cls: "ical-url-text" });
       const copyBtn = container.createEl("button", { text: "Copy URL", cls: "mod-cta" });
       copyBtn.onClickEvent(() => {
@@ -627,35 +838,37 @@ var SettingsTab = class extends import_obsidian3.PluginSettingTab {
       });
     } else {
       container.createEl("p", {
-        text: "Configure your Gist ID above to generate a subscription URL.",
-        cls: "setting-item-description"
+        text: "Complete GitHub Sync configuration to generate your URL.",
+        cls: "ical-url-placeholder"
       });
     }
   }
 };
 
 // src/ObsidianIcalPlugin.ts
-var ObsidianIcalPlugin = class extends import_obsidian4.Plugin {
+var ObsidianIcalPlugin = class extends import_obsidian6.Plugin {
   async onload() {
     console.log("Loading Obsidian iCal Plugin Pro");
     await this.loadSettings();
-    this.settingsManager = await SettingsManager.createInstance(this);
+    this.taskIndex = new TaskIndex();
+    this.taskFinder = new TaskFinder(this.app.vault);
     this.icalService = new IcalService();
     this.fileClient = new FileClient(this.app.vault);
+    await this.buildIndex();
+    this.registerEvent(this.app.vault.on("modify", (file) => this.updateFileInIndex(file)));
+    this.registerEvent(this.app.vault.on("delete", (file) => this.removeFileFromIndex(file)));
+    this.registerEvent(this.app.vault.on("rename", (file, oldPath) => this.renameFileInIndex(file, oldPath)));
     this.addRibbonIcon("calendar-with-checkmark", "iCal Pro: Sync Now", async () => {
-      new import_obsidian4.Notice("iCal Pro: Starting synchronization...");
+      new import_obsidian6.Notice("iCal Pro: Starting synchronization...");
       try {
         await this.saveCalendar();
-        new import_obsidian4.Notice("iCal Pro: Sync completed successfully!");
+        new import_obsidian6.Notice("iCal Pro: Sync completed successfully!");
       } catch (error) {
-        new import_obsidian4.Notice("iCal Pro: Sync failed. Check console for details.");
+        new import_obsidian6.Notice("iCal Pro: Sync failed.");
         console.error(error);
       }
     });
     this.addSettingTab(new SettingsTab(this.app, this));
-    if (this.settings.isPeriodicSaveEnabled) {
-      this.registerInterval(window.setInterval(() => this.saveCalendar(), this.settings.periodicSaveInterval * 60 * 1e3));
-    }
     this.addCommand({
       id: "save-calendar",
       name: "Save calendar",
@@ -663,18 +876,50 @@ var ObsidianIcalPlugin = class extends import_obsidian4.Plugin {
         this.saveCalendar();
       }
     });
+    if (this.settings.isPeriodicSaveEnabled) {
+      this.registerInterval(window.setInterval(() => this.saveCalendar(), this.settings.periodicSaveInterval * 60 * 1e3));
+    }
   }
-  onunload() {
-    console.log("Unloading Obsidian iCal Plugin");
+  async buildIndex() {
+    logger(this.settings.isDebug).log("Building initial task index...");
+    const files = this.app.vault.getMarkdownFiles();
+    for (const file of files) {
+      await this.updateFileInIndex(file);
+    }
+  }
+  async updateFileInIndex(file) {
+    if (!(file instanceof import_obsidian6.TFile))
+      return;
+    if (this.settings.rootPath !== "/" && !file.path.startsWith(this.settings.rootPath)) {
+      this.taskIndex.removeFile(file.path);
+      return;
+    }
+    const cache = this.app.metadataCache.getFileCache(file);
+    if (cache && cache.listItems) {
+      const tasks = await this.taskFinder.findTasks(file, cache.listItems, null, this.settings);
+      this.taskIndex.setTasks(file.path, tasks);
+    }
+  }
+  removeFileFromIndex(file) {
+    if (file instanceof import_obsidian6.TFile) {
+      this.taskIndex.removeFile(file.path);
+    }
+  }
+  async renameFileInIndex(file, oldPath) {
+    this.taskIndex.removeFile(oldPath);
+    await this.updateFileInIndex(file);
+  }
+  async saveCalendar() {
+    logger(this.settings.isDebug).log("Syncing to iCal...");
+    const allTasks = this.taskIndex.getAllTasks();
+    const calendar = this.icalService.getCalendar(allTasks, this.settings);
+    await this.fileClient.save(calendar);
   }
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
   }
   async saveSettings() {
     await this.saveData(this.settings);
-  }
-  async saveCalendar() {
-    logger(this.settings.isDebug).log("Saving calendar...");
   }
 };
 
