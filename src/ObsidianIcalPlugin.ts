@@ -1,4 +1,4 @@
-import { Plugin } from "obsidian";
+import { Plugin, Notice } from "obsidian";
 import { Settings, DEFAULT_SETTINGS } from "./Model/Settings";
 import { SettingsManager } from "./SettingsManager";
 import { IcalService } from "./Service/IcalService";
@@ -20,6 +20,18 @@ export default class ObsidianIcalPlugin extends Plugin {
 		this.settingsManager = await SettingsManager.createInstance(this);
 		this.icalService = new IcalService();
 		this.fileClient = new FileClient(this.app.vault);
+
+		// Add Ribbon Icon for quick sync
+		this.addRibbonIcon("calendar-with-checkmark", "iCal Pro: Sync Now", async () => {
+			new Notice("iCal Pro: Starting synchronization...");
+			try {
+				await this.saveCalendar();
+				new Notice("iCal Pro: Sync completed successfully!");
+			} catch (error) {
+				new Notice("iCal Pro: Sync failed. Check console for details.");
+				console.error(error);
+			}
+		});
 
 		// Add settings tab
 		this.addSettingTab(new SettingsTab(this.app, this));

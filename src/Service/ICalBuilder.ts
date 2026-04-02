@@ -19,6 +19,19 @@ export class ICalBuilder {
 		return this;
 	}
 
+	public setLastUpdated(date: Date): this {
+		const formattedDate = date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+		this.lines.push(`X-WR-DATE:${formattedDate}`);
+		this.lines.push(`X-WR-CALDESC:Last updated at ${date.toLocaleString()}`);
+		return this;
+	}
+
+	public setRefreshInterval(minutes: number): this {
+		this.lines.push(`X-PUBLISHED-TTL:PT${minutes}M`);
+		this.lines.push(`REFRESH-INTERVAL;VALUE=DURATION:PT${minutes}M`);
+		return this;
+	}
+
 	public addProperty(key: string, value: string): this {
 		this.lines.push(`${key}:${this.escapeText(value)}`);
 		return this;

@@ -1,129 +1,166 @@
 import { Task } from "../Model/Task";
 import { Settings } from "../Settings";
+import { ICalBuilder } from "./ICalBuilder";
 
 export class IcalService {
 	public getCalendar(tasks: Task[], settings: Settings): string {
+		const builder = new ICalBuilder();
+		const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+		builder
+			.setCalendarName("Obsidian Calendar")
+			.setTimezone(timezone)
+			.setLastUpdated(new Date())
+			.setRefreshInterval(settings.periodicSaveInterval || 15);
+
 		const includeEvents = settings.includeEventsOrTodos === "EventsAndTodos" || settings.includeEventsOrTodos === "EventsOnly";
 		const includeTodos = settings.includeEventsOrTodos === "EventsAndTodos" || settings.includeEventsOrTodos === "TodosOnly";
 
-		const events = includeEvents ? this.getEvents(tasks, settings) : "";
-		const toDos = includeTodos ? this.getToDos(tasks, settings) : "";
-
-		const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-		let calendar = "BEGIN:VCALENDAR\r\n" +
-			"VERSION:2.0\r\n" +
-			"PRODID:-//Andrew Brereton//obsidian-ical-plugin v2.0.1//EN\r\n" +
-			"X-WR-CALNAME:Obsidian Calendar\r\n" +
-			"NAME:Obsidian Calendar\r\n" +
-			"CALSCALE:GREGORIAN\r\n" +
-			"X-WR-TIMEZONE:" + timezone + "\r\n" +
-			events +
-			toDos +
-			"END:VCALENDAR\r\n";
-
-		return calendar;
-	}
-
-	private getEvents(tasks: Task[], settings: Settings): string {
-		return tasks.map((task) => {
-			return this.getEvent(task, null, "", settings);
-		}).join("");
-	}
-
-	private getEvent(task: Task, date: string | null, prependSummary: string, settings: Settings): string {
-		if (task.hasAnyDate() === false) {
-			return "";
+		if (includeEvents) {
+			this.addEventsToBuilder(tasks, settings, builder);
 		}
 
-		let event = "BEGIN:VEVENT\r\n" +
-			"UID:" + task.getId() + "\r\n" +
-			"DTSTAMP:" + task.getDate(null, "YYYYMMDDTHHmmss") + "\r\n";
+		if (includeTodos) {
+			this.addToDosToBuilder(tasks, settings, builder);
+		}
 
+		return builder.build();
+	}
+
+	private addEventsToBuilder(tasks: Task[], settings: Settings, builder: ICalBuilder): void {
+		tasks.forEach((task) => {
+			this.addEventToBuilder(task, null, "", settings, builder);
+		});
+	}
+
+	private addEventToBuilder(task: Task, date: string | null, prependSummary: string, settings: Settings, builder: ICalBuilder): void {
+		if (task.hasAnyDate() === false) {
+			return;
+		}
+
+		// Handle multiple dates logic (similar to original, but using builder)
 		if (date === null) {
 			switch (settings.howToProcessMultipleDates) {
 				case "PreferStartDate":
+					builder.beginEvent();
+					this.addEventCoreProperties(task, builder);
 					if (task.hasA("Start")) {
-						event += "DTSTART:" + task.getDate("Start", "YYYYMMDD") + "\r\n";
+						builder.addEventProperty("DTSTART", task.getDate("Start", "YYYYMMDD"), false);
 					} else if (task.hasA("Due")) {
-						event += "DTSTART:" + task.getDate("Due", "YYYYMMDD") + "\r\n";
+						builder.addEventProperty("DTSTART", task.getDate("Due", "YYYYMMDD"), false);
 					} else if (task.hasA("TimeStart") && task.hasA("TimeEnd")) {
-						event += "DTSTART:" + task.getDate("TimeStart", "YYYYMMDD[T]HHmmss") + "\r\n";
-						event += "DTEND:" + task.getDate("TimeEnd", "YYYYMMDD[T]HHmmss") + "\r\n";
+						builder.addEventProperty("DTSTART", task.getDate("TimeStart", "YYYYMMDD[T]HHmmss"), false);
+						builder.addEventProperty("DTEND", task.getDate("TimeEnd", "YYYYMMDD[T]HHmmss"), false);
 					} else {
-						event += "DTSTART:" + task.getDate(null, "YYYYMMDD") + "\r\n";
+						builder.addEventProperty("DTSTART", task.getDate(null, "YYYYMMDD"), false);
 					}
+					this.addEventCommonProperties(task, prependSummary, builder);
+					builder.endEvent();
 					break;
 
 				case "CreateMultipleEvents":
-					event = "";
 					if (task.hasA("Start")) {
-						event += this.getEvent(task, task.getDate("Start", "YYYYMMDD"), "🛫 ", settings);
+						builder.beginEvent();
+						this.addEventCoreProperties(task, builder);
+						builder.addEventProperty("DTSTART", task.getDate("Start", "YYYYMMDD"), false);
+						this.addEventCommonProperties(task, "🛫 ", builder);
+						builder.endEvent();
 					}
 					if (task.hasA("Scheduled")) {
-						event += this.getEvent(task, task.getDate("Scheduled", "YYYYMMDD"), "⏳ ", settings);
+						builder.beginEvent();
+						this.addEventCoreProperties(task, builder);
+						builder.addEventProperty("DTSTART", task.getDate("Scheduled", "YYYYMMDD"), false);
+						this.addEventCommonProperties(task, "⏳ ", builder);
+						builder.endEvent();
 					}
 					if (task.hasA("Due")) {
-						event += this.getEvent(task, task.getDate("Due", "YYYYMMDD"), "📅 ", settings);
+						builder.beginEvent();
+						this.addEventCoreProperties(task, builder);
+						builder.addEventProperty("DTSTART", task.getDate("Due", "YYYYMMDD"), false);
+						this.addEventCommonProperties(task, "📅 ", builder);
+						builder.endEvent();
 					}
-					if (event === "") {
-						event += this.getEvent(task, task.getDate(null, "YYYYMMDD"), "", settings);
+					if (!task.hasA("Start") && !task.hasA("Scheduled") && !task.hasA("Due")) {
+						builder.beginEvent();
+						this.addEventCoreProperties(task, builder);
+						builder.addEventProperty("DTSTART", task.getDate(null, "YYYYMMDD"), false);
+						this.addEventCommonProperties(task, "", builder);
+						builder.endEvent();
 					}
-					return event;
+					break;
 
 				case "PreferDueDate":
 				default:
+					builder.beginEvent();
+					this.addEventCoreProperties(task, builder);
 					if (task.hasA("Start") && task.hasA("Due")) {
-						event += "DTSTART:" + task.getDate("Start", "YYYYMMDDTHHmmss") + "\r\n" +
-							"DTEND:" + task.getDate("Due", "YYYYMMDDTHHmmss") + "\r\n";
+						builder.addEventProperty("DTSTART", task.getDate("Start", "YYYYMMDDTHHmmss"), false);
+						builder.addEventProperty("DTEND", task.getDate("Due", "YYYYMMDDTHHmmss"), false);
 					} else if (task.hasA("Due")) {
-						event += "DTSTART:" + task.getDate("Due", "YYYYMMDD") + "\r\n";
+						builder.addEventProperty("DTSTART", task.getDate("Due", "YYYYMMDD"), false);
 					} else if (task.hasA("Start")) {
-						event += "DTSTART:" + task.getDate("Start", "YYYYMMDD") + "\r\n";
+						builder.addEventProperty("DTSTART", task.getDate("Start", "YYYYMMDD"), false);
 					} else if (task.hasA("TimeStart") && task.hasA("TimeEnd")) {
-						event += "DTSTART:" + task.getDate("TimeStart", "YYYYMMDD[T]HHmmss") + "\r\n";
-						event += "DTEND:" + task.getDate("TimeEnd", "YYYYMMDD[T]HHmmss") + "\r\n";
+						builder.addEventProperty("DTSTART", task.getDate("TimeStart", "YYYYMMDD[T]HHmmss"), false);
+						builder.addEventProperty("DTEND", task.getDate("TimeEnd", "YYYYMMDD[T]HHmmss"), false);
 					} else {
-						event += "DTSTART:" + task.getDate(null, "YYYYMMDD") + "\r\n";
+						builder.addEventProperty("DTSTART", task.getDate(null, "YYYYMMDD"), false);
 					}
+					this.addEventCommonProperties(task, prependSummary, builder);
+					builder.endEvent();
 					break;
 			}
 		} else {
-			event += "DTSTART:" + date + "\r\n";
+			builder.beginEvent();
+			this.addEventCoreProperties(task, builder);
+			builder.addEventProperty("DTSTART", date, false);
+			this.addEventCommonProperties(task, prependSummary, builder);
+			builder.endEvent();
 		}
-
-		const body = task.getBody();
-		const description = body ? "DESCRIPTION:" + body + "\r\n" : "";
-
-		event += "SUMMARY:" + prependSummary + task.getSummary() + "\r\n" +
-			description +
-			"LOCATION:" + encodeURI(task.getLocation()) + "\r\n" +
-			"END:VEVENT\r\n";
-
-		return event;
 	}
 
-	private getToDos(tasks: Task[], settings: Settings): string {
-		return tasks.map((task) => {
-			return this.getToDo(task, settings);
-		}).join("");
+	private addEventCoreProperties(task: Task, builder: ICalBuilder): void {
+		builder.addEventProperty("UID", task.getId(), false);
+		builder.addEventProperty("DTSTAMP", task.getDate(null, "YYYYMMDDTHHmmss"), false);
 	}
 
-	private getToDo(task: Task, settings: Settings): string {
+	private addEventCommonProperties(task: Task, prependSummary: string, builder: ICalBuilder): void {
+		builder.addEventProperty("SUMMARY", prependSummary + task.getSummary());
+		
 		const body = task.getBody();
-		const description = body ? "DESCRIPTION:" + body + "\r\n" : "";
-
-		let toDo = "BEGIN:VTODO\r\n" +
-			"UID:" + task.getId() + "\r\n" +
-			"SUMMARY:" + task.getSummary() + "\r\n" +
-			(task.hasAnyDate() ? "DTSTAMP:" + task.getDate(null, "YYYYMMDDTHHmmss") + "\r\n" : "") +
-			description +
-			"LOCATION:" + encodeURI(task.getLocation()) + "\r\n";
-
-		if (task.hasA("Due")) {
-			toDo += "DUE;VALUE=DATE:" + task.getDate("Due", "YYYYMMDD") + "\r\n";
+		if (body) {
+			builder.addEventProperty("DESCRIPTION", body);
 		}
+		
+		builder.addEventProperty("LOCATION", task.getLocation());
+	}
 
-		return toDo + "END:VTODO\r\n";
+	private addToDosToBuilder(tasks: Task[], settings: Settings, builder: ICalBuilder): void {
+		tasks.forEach((task) => {
+			if (settings.isOnlyTasksWithoutDatesAreTodos && task.hasAnyDate()) {
+				return;
+			}
+			
+			builder.beginToDo();
+			builder.addEventProperty("UID", task.getId(), false);
+			builder.addEventProperty("SUMMARY", task.getSummary());
+			
+			if (task.hasAnyDate()) {
+				builder.addEventProperty("DTSTAMP", task.getDate(null, "YYYYMMDDTHHmmss"), false);
+			}
+
+			const body = task.getBody();
+			if (body) {
+				builder.addEventProperty("DESCRIPTION", body);
+			}
+
+			builder.addEventProperty("LOCATION", task.getLocation());
+
+			if (task.hasA("Due")) {
+				builder.addEventProperty("DUE;VALUE=DATE", task.getDate("Due", "YYYYMMDD"), false);
+			}
+
+			builder.endToDo();
+		});
 	}
 }

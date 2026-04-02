@@ -13,6 +13,9 @@ export function createTaskFromLine(line: string, fileUri: string, dateOverride: 
 	const status = (statusChar === "x" || statusChar === "X") ? TaskStatus.Done : TaskStatus.Todo;
 	let summary = match[4].trim();
 
+	// Remove bold and italic formatting from summary
+	summary = summary.replace(/\*\*|__/g, "").replace(/\*|_/g, "");
+
 	const dates: TaskDate[] = [];
 
 	// Parse emoji-based dates (Tasks plugin style)
