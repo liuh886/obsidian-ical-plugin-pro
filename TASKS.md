@@ -24,3 +24,10 @@
 - [ ] 5.3 Implement comprehensive `README.md` with configuration guides.
 - [ ] 5.4 Run Linting and fix all TypeScript errors.
 - [ ] 5.5 Submit to [Obsidian Releases](https://github.com/obsidianmd/obsidian-releases).
+
+## Phase 6: Todo & Alarm Enhancements
+- [ ] 6.1 **VALARM Support in ICalBuilder**: Update `ICalBuilder.ts` to support nested `VALARM` components (`beginAlarm`, `endAlarm`, `TRIGGER`, `ACTION`).
+- [ ] 6.2 **Alarm Parsing**: Update `TaskFactory.ts` to recognize alarm triggers in markdown (e.g., `⏰ 15m` means alert 15 minutes before start).
+- [ ] 6.3 **Priority Mapping**: Implement logic to map Obsidian task priorities (`⏫`, `🔼`, `🔽`) to iCalendar `PRIORITY` values (1-9).
+- [ ] 6.4 **Global Alarm Settings**: Add settings to `Settings.ts` and `SettingsTab.ts` for default alarm offsets (e.g., "Always remind me 10 mins before events").
+- [ ] 6.5 **Advanced VTODO metadata**: Enhance `IcalService.ts` to include more VTODO specific properties like `PERCENT-COMPLETE` or `CATEGORIES` based on tags.
