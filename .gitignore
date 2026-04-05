@@ -18,6 +18,9 @@ data.json
 TASKS.md
 DESIGN.md
 
+# Scripts & Tooling (local only)
+scripts/
+
 # Editor config
 .vscode/
 .idea/
