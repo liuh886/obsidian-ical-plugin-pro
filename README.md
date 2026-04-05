@@ -1,6 +1,6 @@
 # iCal Pro for Obsidian
 
-Turn Obsidian tasks into standards-compliant calendar feeds for local `.ics` files or GitHub Gist subscriptions.
+Manage your tasks in Markdown and expose them to Google Calendar, Apple Calendar, and Outlook via standards-compliant iCal feeds.
 
 ## What It Does
 
