@@ -3,7 +3,7 @@
 	"name": "iCal Pro",
 	"version": "2.1.1",
 	"minAppVersion": "0.15.0",
-	"description": "iCal Pro with timezone support, incremental indexing, and multi-line task description.",
+	"description": "Sync tasks to Google, Apple, and Outlook calendars via a standards-compliant iCalendar (ICS) feed with smart date inheritance.",
 	"author": "liuh886 (forked from Andrew Brereton)",
 	"authorUrl": "https://github.com/liuh886",
 	"isDesktopOnly": false
