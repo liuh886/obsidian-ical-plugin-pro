@@ -1,7 +1,7 @@
 {
-  "name": "obsidian-ical-plugin-pro",
-  "version": "2.1.0",
-  "description": "Customized iCal plugin with timezone support and multi-line task description.",
+  "name": "ical-plugin-pro",
+  "version": "2.1.1",
+  "description": "iCal Pro with timezone support, incremental indexing, and multi-line task description.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
