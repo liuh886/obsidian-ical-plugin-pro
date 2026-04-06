@@ -38,6 +38,7 @@ iCal Pro intelligently categorizes tasks based on the presence of **Time**.
 | **Priority** | `⏫ High` / `🔼 Medium` / `🔽 Low` | `PRIORITY: 1 / 5 / 9` |
 | **Alarms** | `⏰ 15` (15 minutes before) | `VALARM` |
 | **Recurrence**| `🔁 every weekday` | `RRULE` |
+| **Description**| `the description under the line - [ ]` | Visible in shcedule description |
 | **Day Planner Mode** | `# 2026-04-01` (Any Heading) | Inherited Date |
 
 > [!IMPORTANT]
