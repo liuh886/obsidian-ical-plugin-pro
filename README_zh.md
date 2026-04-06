@@ -11,14 +11,21 @@
 > - **隐私优先**：本地优先架构，可选 GitHub Gist 加密同步。
 > - **深度语义**：智能的 `VEVENT`（事件）与 `VTODO`（待办）语义自动切分。
 
+---
+
+## 🔒 隐私与安全
+
+iCal Pro 秉承“本地优先”的设计理念：
+- **无数据收集**：我们不会追踪您的使用行为，也不会收集任何个人数据。
+- **直接同步**：您的日历直接从您的设备同步到本地文件或 GitHub Gist，不经过任何第三方服务器。
+- **安全存储**：您的 GitHub PAT 安全地存储在 Obsidian 的本地存储中，仅用于与 GitHub API 通信。
+
 ## 核心能力
 
-- 带时间的任务导出为 `VEVENT`（在日历网格中展示）
-- 有日期但没有时间的任务导出为 `VTODO`（在提醒事项/侧边栏展示）
-- 没有日期的任务导出为浮动 `VTODO`
-- 支持 Day Planner 风格的日期继承（标题、文件名）
-- 支持本地 `.ics` 文件导出和 GitHub Gist 同步
-- 保留 Obsidian 笔记回跳链接 (`obsidian://`)
+- **智能同步**：自动将任务切分为 `VEVENT`（带时间）和 `VTODO`（仅日期/浮动）。
+- **零依赖探索**：无需安装额外插件即可从 Daily Notes 文件名或标题继承日期。
+- **可靠标识**：稳定的 `UID` 生成算法，确保任务在文件间移动时不会产生重复。
+- **灵活目标**：支持同步到本地库文件或私有 GitHub Gist，实现全平台订阅。
 
 ## 支持的语法
 
@@ -33,37 +40,13 @@ iCal Pro 为兼容性而生，开箱即用支持主流任务格式：
 | **时间范围**| `09:00 - 10:30` | `DTSTART` & `DTEND` |
 | **上下文** | `## 2024-03-20` (标题) | 自动继承日期 |
 
-## 已实现功能
+## 功能特性
 
-- 多路径导出规则：一个路径绑定一个分类，可配置多条
-- 过滤能力：
-  - Tasks 全局过滤兼容
-  - 标签 include / exclude
-  - 分类 include / exclude
-- 任务语义增强：
-  - 优先级表情映射到 RFC 5545 `PRIORITY`
-  - 常见 `every ...` 循环规则映射到 `RRULE`
-  - `待办 / 进行中 / 已取消 / 已完成` 生命周期映射
-  - 可选 `VALARM` 提醒
-- 解析增强：
-  - 任务下方列表、缩进内容、引用块正文抓取
-  - 支持 `> - [ ] 09:00 ...` 这类 callout / blockquote 任务
-  - 清洗 Obsidian / Dataview 语法，避免脏内容进入 ICS
-- 可运维能力：
-  - 启动自动同步
-  - 定时同步
-  - 同步预览：导出数、过滤数、`VEVENT` 数、`VTODO` 数
-  - 分目标同步结果报告
-  - 可复制的诊断包
-  - 解释为什么任务被过滤、为什么降级为 `VTODO`
-
-## 日历语义
-
-默认在 `EventsAndTodos` 模式下：
-
-- 有日期且有时间 -> `VEVENT`
-- 有日期但无时间 -> `VTODO`
-- 无日期 -> floating `VTODO`
+- **多路径规则**：将特定的库路径绑定到不同的日历分类。
+- **精细过滤**：通过全局过滤器、标签或分类进行包含/排除。
+- **任务高保真**：原生支持 **优先级** (`⏫🔼🔽`)、**循环** (`🔁`) 和 **闹钟** (`⏰`)。
+- **富文本正文**：完整抓取任务下方的列表或引用块内容，并映射到 `DESCRIPTION`。
+- **自诊断系统**：内置同步预览、分目标报告以及脱敏的诊断包。
 
 ## 兼容性
 
@@ -80,30 +63,19 @@ iCal Pro 为兼容性而生，开箱即用支持主流任务格式：
 
 ## 快速开始
 
-1. 通过 [BRAT](https://github.com/TfTHacker/obsidian42-brat) 安装，仓库地址填 `liuh886/obsidian-ical-plugin-pro`
-2. 打开 `iCal Pro` 设置页
-3. 至少添加一条 source path rule
-4. 至少启用一个输出目标：
-   - 本地 `.ics` 文件
-   - GitHub Gist
-5. 如果启用 Gist，填写 GitHub 用户名、Gist ID、PAT，然后点击 `Validate`
-6. 点击 `Sync Now`
-7. 在日历客户端订阅生成的 Gist raw URL 或本地 `.ics` 文件
+1. 通过 **BRAT** 安装 `liuh886/obsidian-ical-plugin-pro`。
+2. 在设置中添加 **Source Path Rule**（例如您的任务或日记文件夹）。
+3. 启用一个 **输出目标**（本地文件或 GitHub Gist）。
+4. 若使用 Gist，填入您的 PAT 和 Gist ID，然后点击 **Validate**。
+5. 点击 **Sync Now**，并在日历应用中订阅生成的链接。
 
-## 设置页结构
+## 常见问题 (FAQ)
 
-- `Scope & Discovery`：路径到分类的绑定规则
-- `Scheduling & Alarms`：Day Planner、同步策略、多日期处理、提醒
-- `Content & Filters`：标签/分类过滤、完成项过滤
-- `Sync & Cloud Connectivity`：文件名、本地路径、Gist 同步、连接校验
-- `Advanced & Diagnostics`：链接格式、自动同步、调试、诊断
+**问：为什么我的待办事项 (VTODO) 没有在 Google 日历中显示？**
+答：Google 日历原生仅支持 `VEVENT`（日历事件）。若需完整的 `VTODO` 支持，建议使用 Apple Calendar、Microsoft Outlook，或支持 iCal 订阅的专业任务管理应用（如“提醒事项”）。
 
-设置页顶部状态卡现在会展示：
-
-- 当前 readiness 状态
-- 同步预览
-- 最近一次分目标同步结果
-- 诊断包复制按钮
+**问：使用 GitHub Gist 安全吗？**
+答：安全。Gist 属于您的个人资产。我们建议使用“私有 (Private) Gist”以确保最高隐私。您的个人访问令牌 (PAT) 除用于与 GitHub 通信外，绝不会离开您的设备。
 
 ## 开发命令
 

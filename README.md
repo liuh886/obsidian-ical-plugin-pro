@@ -10,11 +10,21 @@ Manage your tasks in Markdown and expose them to Google Calendar, Apple Calendar
 > - **Privacy First**: Local-first architecture with optional GitHub Gist sync.
 > - **Deep Logic**: Intelligent `VEVENT` vs `VTODO` semantic splitting.
 
-## What It Does
-...
-- Supports Day Planner style date inheritance from headings and daily note filenames
-- Syncs to a vault file or GitHub Gist
-- Preserves Obsidian deep links back to source notes
+---
+
+## 🔒 Privacy & Security
+
+iCal Pro is built with a local-first philosophy.
+- **No Data Collection**: We do not track your usage or collect any personal data.
+- **Direct Sync**: Your calendar is synced directly from your device to your local file or GitHub Gist.
+- **Secure Storage**: Your GitHub PAT is stored securely within Obsidian's local storage and is only used to communicate with the GitHub API.
+
+## Core Capabilities
+
+- **Intelligent Sync**: Automatically splits tasks into `VEVENT` (timed) and `VTODO` (dated/floating).
+- **Zero-Dependency Discovery**: Inherits dates from Daily Note filenames or headings without requiring extra plugins.
+- **Reliable Identity**: Stable `UID` generation ensures no duplicates when tasks move between files.
+- **Flexible Destinations**: Sync to a local vault file or a private GitHub Gist for universal access.
 
 ## Supported Syntax
 
@@ -29,33 +39,13 @@ iCal Pro is built for compatibility. It recognizes popular task formats out-of-t
 | **Time Range**| `09:00 - 10:30` | `DTSTART` & `DTEND` |
 | **Context** | `## 2024-03-20` (Heading) | Inherited Date |
 
-## Current Feature Set
+## Features
 
-- Multi-source export rules: bind multiple vault paths to calendar categories
-- Filtering: global task filter, include/exclude tags, include/exclude categories
-- Task fidelity:
-  - priority mapping from Obsidian Tasks priority emoji to RFC 5545 `PRIORITY`
-  - recurrence mapping for common `every ...` patterns to `RRULE`
-  - task lifecycle mapping for `todo / in-progress / cancelled / completed`
-  - optional `VALARM` export
-- Rich parsing:
-  - task body capture from lists, indented lines, and blockquotes
-  - callout/blockquote task support such as `> - [ ] 09:00 ...`
-  - summary and description sanitization for Obsidian / Dataview syntax
-- Operability:
-  - startup sync and periodic sync
-  - sync preview with exported / filtered / `VEVENT` / `VTODO` counts
-  - destination-by-destination sync result reporting
-  - copyable diagnostics bundle with redacted settings and recent sync history
-  - explanations for filtered tasks and `VTODO` downgrade reasons
-
-## Calendar Semantics
-
-- Timed task with date -> `VEVENT`
-- Dated task without time -> `VTODO`
-- Task without date -> floating `VTODO`
-
-This is the default behavior in `EventsAndTodos` mode.
+- **Multi-Source Rules**: Bind specific vault paths to distinct calendar categories.
+- **Granular Filtering**: Include/Exclude by global filters, tags, or categories.
+- **Task Fidelity**: Native support for **Priority** (`⏫🔼🔽`), **Recurrence** (`🔁`), and **Alarms** (`⏰`).
+- **Rich Context**: Full body capture from indented lists or blockquotes mapped to `DESCRIPTION`.
+- **Diagnostics**: Built-in sync preview, destination reports, and redacted debug bundles.
 
 ## Compatible Calendars
 
@@ -82,21 +72,6 @@ Client support for `VTODO` varies. Apple-oriented ecosystems usually handle `VTO
 6. Click `Sync Now`
 7. Subscribe to the generated raw Gist URL or local `.ics` file
 
-## Settings Highlights
-
-- `Scope & Discovery`: source path to category mapping
-- `Scheduling & Alarms`: Day Planner mode, sync strategy, multi-date handling, alarms
-- `Content & Filters`: task tag/category filters and completion filtering
-- `Sync & Cloud Connectivity`: filename, local path, Gist sync, validation
-- `Advanced & Diagnostics`: link formatting, auto-sync, debug mode, diagnostics workflow
-
-The status card in settings shows:
-
-- readiness state
-- sync preview
-- latest per-destination sync result
-- diagnostics copy action
-
 ## Debugging & Logs
 
 If you encounter issues, you can enable verbose logging:
@@ -108,6 +83,14 @@ If you encounter issues, you can enable verbose logging:
 5. Look for logs prefixed with `[info][ical]` or `iCal Pro:`.
 
 You can also use the **Copy Diagnostics** button in the status card to generate a redacted summary of your configuration and recent sync history to include in bug reports.
+
+## FAQ
+
+**Q: Why don't my To-Dos (VTODO) show up in Google Calendar?**
+A: Google Calendar natively only supports `VEVENT`. For full `VTODO` support, we recommend using Apple Calendar, Microsoft Outlook, or dedicated task managers like Reminders that support iCal subscriptions.
+
+**Q: Is it safe to use GitHub Gist?**
+A: Yes. Your Gist is yours. We recommend using a private Gist for maximum privacy. Your Personal Access Token never leaves your machine except to communicate with GitHub.
 
 ## Development
 
