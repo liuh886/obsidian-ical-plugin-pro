@@ -28,18 +28,23 @@ iCal Pro is built with a local-first philosophy.
 
 ## Supported Syntax
 
-iCal Pro is built for compatibility. It recognizes popular task formats out-of-the-box:
+iCal Pro intelligently categorizes tasks based on the presence of **Time**.
 
-| Feature | Syntax Example | iCal Mapping |
+| Feature | Syntax Example | Result (iCalendar) |
 | :--- | :--- | :--- |
-| **Dates** | `📅 2024-03-20` / `⏳ 2024-03-21` | `DUE` / `DTSTART` |
+| **Event** (Timed) | `- [ ] 2026-04-01 13:00-14:00 Task` | `VEVENT` (Visible in Grid) |
+| **To-Do** (Dated) | `- [ ] 2026-04-01 Task` | `VTODO` (Sidebar/Reminders) |
+| **To-Do** (Floating)| `- [ ] Task` | `VTODO` (Unscheduled) |
 | **Priority** | `⏫ High` / `🔼 Medium` / `🔽 Low` | `PRIORITY: 1 / 5 / 9` |
 | **Alarms** | `⏰ 15` (15 minutes before) | `VALARM` |
 | **Recurrence**| `🔁 every weekday` | `RRULE` |
-| **Time Range**| `09:00 - 10:30` | `DTSTART` & `DTEND` |
-| **Context** | `## 2024-03-20` (Heading) | Inherited Date |
+| **Context** | `## 2026-04-01` (Heading) | Inherited Date (Day Planner) |
 
-## Features
+> [!IMPORTANT]
+> **Google Calendar Compatibility**: Google Calendar **does not support** `VTODO`. If you want your tasks to appear in the Google Calendar grid, you **must** include a time (e.g., `13:00`).
+
+## Core Capabilities
+
 
 - **Multi-Source Rules**: Bind specific vault paths to distinct calendar categories.
 - **Granular Filtering**: Include/Exclude by global filters, tags, or categories.
