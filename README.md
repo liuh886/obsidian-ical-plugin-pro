@@ -38,7 +38,7 @@ iCal Pro intelligently categorizes tasks based on the presence of **Time**.
 | **Priority** | `⏫ High` / `🔼 Medium` / `🔽 Low` | `PRIORITY: 1 / 5 / 9` |
 | **Alarms** | `⏰ 15` (15 minutes before) | `VALARM` |
 | **Recurrence**| `🔁 every weekday` | `RRULE` |
-| **Day Planner Mode** | `## 2026-04-01` (Heading) | Inherited Date |
+| **Day Planner Mode** | `# 2026-04-01` (Any Heading) | Inherited Date |
 
 > [!IMPORTANT]
 > **Google Calendar Compatibility**: Google Calendar **does not support** `VTODO`. If you want your tasks to appear in the Google Calendar grid, you **must** include a time (e.g., `13:00`).
