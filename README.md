@@ -104,6 +104,12 @@ A: Yes. Your Gist is yours. We recommend using a private Gist for maximum privac
 - `npm run test:smoke`
 - `npm run validate`
 
+## Credits
+
+iCal Pro is a significantly enhanced and refactored version of the original [obsidian-ical-plugin](https://github.com/mcarper1/obsidian-ical-plugin) by **Andrew Brereton**. 
+
+This "Pro" edition maintains the original vision while introducing a completely re-engineered core for better performance, timezone reliability, and advanced task metadata support.
+
 ## License
 
 MIT

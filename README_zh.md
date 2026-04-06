@@ -89,6 +89,12 @@ iCal Pro 根据任务是否包含 **“时间”** 来智能切分类别。
 - `npm run test:smoke`
 - `npm run validate`
 
+## 致谢
+
+iCal Pro 是在 **Andrew Brereton** 开发的原始 [obsidian-ical-plugin](https://github.com/mcarper1/obsidian-ical-plugin) 基础上进行的深度重构和功能增强版本。
+
+本“Pro”版在保留其核心理念的同时，引入了全新的底层架构，以实现更好的性能、更可靠的时区处理以及对任务元数据（优先级、闹钟、循环）的高级支持。
+
 ## 协议
 
 MIT
