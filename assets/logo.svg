@@ -1,0 +1,26 @@
+<svg width="200" height="200" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆角矩形 -->
+  <rect width="100" height="100" rx="22" fill="url(#paint0_linear)"/>
+  
+  <!-- 渐变定义 -->
+  <defs>
+    <linearGradient id="paint0_linear" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#4C1D95"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 日历主体框 (半透明填充) -->
+  <rect x="25" y="30" width="50" height="45" rx="4" fill="white" fill-opacity="0.2"/>
+  <rect x="25" y="30" width="50" height="45" rx="4" stroke="white" stroke-width="3.5" stroke-linejoin="round"/>
+  
+  <!-- 日历顶部横线 -->
+  <path d="M25 42H75" stroke="white" stroke-width="3.5" stroke-linecap="round"/>
+  
+  <!-- 日历挂钩/活页环 -->
+  <rect x="35" y="22" width="4" height="12" rx="2" fill="white"/>
+  <rect x="61" y="22" width="4" height="12" rx="2" fill="white"/>
+
+  <!-- 核心任务勾选 (Pro 标志) -->
+  <path d="M42 58L48 64L60 52" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

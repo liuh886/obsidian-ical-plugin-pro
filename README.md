@@ -1,15 +1,33 @@
 # iCal Pro for Obsidian
 
-Manage your tasks in Markdown and expose them to Google Calendar, Apple Calendar, and Outlook via standards-compliant iCal feeds.
+Manage your tasks in Markdown and expose them to Google Calendar, Apple Calendar, and Outlook via standards-compliant iCalendar feeds.
+
+![iCal Pro Illustration](assets/ical_pro_about.jpg)
+
+> **The Professional Standard for Obsidian Calendar Sync.**
+> - **High-Fidelity**: Strict RFC 5545 compliance (folding, CRLF, escaping).
+> - **Zero Dependency**: Works natively with **Tasks** and **Day Planner** syntax without requiring those plugins to be installed.
+> - **Privacy First**: Local-first architecture with optional GitHub Gist sync.
+> - **Deep Logic**: Intelligent `VEVENT` vs `VTODO` semantic splitting.
 
 ## What It Does
-
-- Exports timed tasks as `VEVENT`
-- Exports dated tasks without time as `VTODO`
-- Exports undated tasks as floating `VTODO`
+...
 - Supports Day Planner style date inheritance from headings and daily note filenames
 - Syncs to a vault file or GitHub Gist
 - Preserves Obsidian deep links back to source notes
+
+## Supported Syntax
+
+iCal Pro is built for compatibility. It recognizes popular task formats out-of-the-box:
+
+| Feature | Syntax Example | iCal Mapping |
+| :--- | :--- | :--- |
+| **Dates** | `📅 2024-03-20` / `⏳ 2024-03-21` | `DUE` / `DTSTART` |
+| **Priority** | `⏫ High` / `🔼 Medium` / `🔽 Low` | `PRIORITY: 1 / 5 / 9` |
+| **Alarms** | `⏰ 15` (15 minutes before) | `VALARM` |
+| **Recurrence**| `🔁 every weekday` | `RRULE` |
+| **Time Range**| `09:00 - 10:30` | `DTSTART` & `DTEND` |
+| **Context** | `## 2024-03-20` (Heading) | Inherited Date |
 
 ## Current Feature Set
 

@@ -1,17 +1,37 @@
-# Obsidian iCal Pro
+# iCal Pro for Obsidian
 
-把 Obsidian 里的任务导出成标准 `.ics` 日历订阅，可写入本地文件，也可同步到 GitHub Gist。
+在 Markdown 中管理你的任务，并通过符合标准的 iCalendar 订阅同步到 Google 日历、Apple 日历和 Outlook。
 
-## 当前能力
+![iCal Pro 示意图](assets/ical_pro_about.jpg)
 
-- 带时间的任务导出为 `VEVENT`
-- 有日期但没有时间的任务导出为 `VTODO`
-- 没有日期的任务导出为 floating `VTODO`
-- 支持 Day Planner 风格的日期继承
-  - 标题日期继承
-  - Daily Note 文件名日期继承
+> **Obsidian 日历同步的专业标准。**
+
+> - **高保真 (High-Fidelity)**：严格遵循 RFC 5545 标准（折行、CRLF、转义）。
+> - **零依赖 (Zero Dependency)**：原生支持 **Tasks** 和 **Day Planner** 语法，**无需**安装这些插件即可生效。
+> - **隐私优先**：本地优先架构，可选 GitHub Gist 加密同步。
+> - **深度语义**：智能的 `VEVENT`（事件）与 `VTODO`（待办）语义自动切分。
+
+## 核心能力
+
+- 带时间的任务导出为 `VEVENT`（在日历网格中展示）
+- 有日期但没有时间的任务导出为 `VTODO`（在提醒事项/侧边栏展示）
+- 没有日期的任务导出为浮动 `VTODO`
+- 支持 Day Planner 风格的日期继承（标题、文件名）
 - 支持本地 `.ics` 文件导出和 GitHub Gist 同步
-- 保留 `obsidian://` 回跳链接
+- 保留 Obsidian 笔记回跳链接 (`obsidian://`)
+
+## 支持的语法
+
+iCal Pro 为兼容性而生，开箱即用支持主流任务格式：
+
+| 特性 | 语法示例 | iCal 映射 |
+| :--- | :--- | :--- |
+| **日期** | `📅 2024-03-20` / `⏳ 2024-03-21` | `DUE` / `DTSTART` |
+| **优先级** | `⏫ 高` / `🔼 中` / `🔽 低` | `PRIORITY: 1 / 5 / 9` |
+| **闹钟** | `⏰ 15` (提前 15 分钟) | `VALARM` |
+| **循环** | `🔁 every weekday` | `RRULE` |
+| **时间范围**| `09:00 - 10:30` | `DTSTART` & `DTEND` |
+| **上下文** | `## 2024-03-20` (标题) | 自动继承日期 |
 
 ## 已实现功能
 
