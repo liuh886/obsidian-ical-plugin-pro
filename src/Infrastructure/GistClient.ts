@@ -1,6 +1,6 @@
 import { requestUrl } from "obsidian";
-import { Settings } from "./Model/Settings";
-import { CalendarDestination } from "./Infrastructure/CalendarDestination";
+import { Settings } from "../Model/Settings";
+import { CalendarDestination } from "./CalendarDestination";
 
 export class GistClient implements CalendarDestination {
 	public readonly name = "github-gist";

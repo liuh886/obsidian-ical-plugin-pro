@@ -9,14 +9,14 @@ import { SyncPreviewService } from "./Application/SyncPreviewService";
 import { SyncReadinessService } from "./Application/SyncReadinessService";
 import { TaskIdentityService } from "./Application/TaskIdentityService";
 import { TaskIndexingService } from "./Application/TaskIndexingService";
-import { FileClient } from "./FileClient";
-import { GistClient } from "./GistClient";
-import { logger } from "./Logger";
+import { FileClient } from "./Infrastructure/FileClient";
+import { GistClient } from "./Infrastructure/GistClient";
+import { logger } from "./Service/Logger";
 import { DEFAULT_SETTINGS, Settings, migrateSettings } from "./Model/Settings";
 import { IcalService } from "./Service/IcalService";
 import { TaskFinder } from "./Service/TaskFinder";
 import { TaskIndex } from "./Service/TaskIndex";
-import { SettingsTab } from "./SettingsTab";
+import { SettingsTab } from "./UI/SettingsTab";
 
 type UpdateSettingsOptions = {
 	rebuildIndex?: boolean;
@@ -60,19 +60,24 @@ export default class ObsidianIcalPlugin extends Plugin {
 			new FileClient(this.app.vault),
 			new GistClient(),
 		]);
-		await this.rebuildIndex();
-		await this.saveSettings();
 
 		this.registerVaultEvents();
-		this.syncIntervalId = this.syncAutomationService.configurePeriodicSync(
-			this.settings,
-			() => this.saveCalendar(),
-			(intervalId) => this.registerInterval(intervalId),
-			this.syncIntervalId,
-		);
 		this.registerUi();
 		this.registerCommands();
-		void this.syncAutomationService.runStartupSyncIfReady(this.settings, () => this.saveCalendar());
+
+		// Postpone heavy operations until Obsidian is fully loaded
+		this.app.workspace.onLayoutReady(async () => {
+			await this.rebuildIndex();
+			
+			this.syncIntervalId = this.syncAutomationService.configurePeriodicSync(
+				this.settings,
+				() => this.saveCalendar(),
+				(intervalId) => this.registerInterval(intervalId),
+				this.syncIntervalId,
+			);
+			
+			void this.syncAutomationService.runStartupSyncIfReady(this.settings, () => this.saveCalendar());
+		});
 	}
 
 	public async updateSettings(patch: Partial<Settings>, options: UpdateSettingsOptions = {}): Promise<void> {

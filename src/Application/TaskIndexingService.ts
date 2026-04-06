@@ -3,7 +3,7 @@ import { Settings, TaskSourceRule } from "../Model/Settings";
 import { HeadingsHelper } from "../Service/HeadingsHelper";
 import { TaskFinder } from "../Service/TaskFinder";
 import { TaskIndex } from "../Service/TaskIndex";
-import { logger } from "../Logger";
+import { logger } from "../Service/Logger";
 import { TaskIdentityService, TaskIdentityState } from "./TaskIdentityService";
 import { ReasonCount, TaskFilterPolicy } from "./TaskFilterPolicy";
 

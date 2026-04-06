@@ -119,3 +119,11 @@ You can also use the **Copy Diagnostics** button in the status card to generate 
 ## License
 
 MIT
+
+---
+
+## Support
+
+If you find this plugin useful and want to support its development, you can buy me a coffee!
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/F1F7WYJ6B)

@@ -115,3 +115,11 @@ iCal Pro 为兼容性而生，开箱即用支持主流任务格式：
 ## 协议
 
 MIT
+
+---
+
+## 支持与打赏
+
+如果你觉得这个插件对你有帮助，欢迎请我喝杯咖啡，支持我的持续开发！
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/F1F7WYJ6B)

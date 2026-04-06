@@ -1,6 +1,6 @@
 import { Vault, normalizePath, TFolder, TFile } from "obsidian";
-import { Settings } from "./Model/Settings";
-import { CalendarDestination } from "./Infrastructure/CalendarDestination";
+import { Settings } from "../Model/Settings";
+import { CalendarDestination } from "./CalendarDestination";
 
 export class FileClient implements CalendarDestination {
 	public readonly name = "local-file";

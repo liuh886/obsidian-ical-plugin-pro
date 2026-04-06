@@ -1,7 +1,6 @@
 {
 	"id": "obsidian-ical-plugin-pro",
 	"name": "iCal Pro",
-	"version": "2.1.0",
 	"minAppVersion": "0.15.0",
 	"description": "Pro version of iCal sync for Obsidian with timezone support, incremental indexing, and multi-line task description.",
 	"author": "liuh886 (forked from Andrew Brereton)",

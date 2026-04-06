@@ -1,5 +1,5 @@
 import { App, Notice, PluginSettingTab, Setting, normalizePath, setIcon } from "obsidian";
-import ObsidianIcalPlugin from "./ObsidianIcalPlugin";
+import ObsidianIcalPlugin from "../ObsidianIcalPlugin";
 import { FolderSuggest } from "./FolderSuggest";
 import {
 	HOW_TO_PARSE_INTERNAL_LINKS,
@@ -7,7 +7,7 @@ import {
 	INCLUDE_EVENTS_OR_TODOS,
 	LINK_PLACEMENT,
 	TaskSourceRule,
-} from "./Model/Settings";
+} from "../Model/Settings";
 
 export class SettingsTab extends PluginSettingTab {
 	private readonly pendingUpdates = new Map<string, number>();
@@ -45,6 +45,28 @@ export class SettingsTab extends PluginSettingTab {
 		this.renderFilteringSettings(containerEl);
 		this.renderDestinationSettings(containerEl);
 		this.renderAdvancedSettings(containerEl);
+		this.renderSupportSection(containerEl);
+	}
+
+	private renderSupportSection(containerEl: HTMLElement): void {
+		this.addHeader(containerEl, "heart", "6. Support the Project");
+
+		const supportDiv = containerEl.createDiv({ cls: "ical-pro-support" });
+		supportDiv.createEl("p", {
+			text: "If iCal Pro helps you stay organized, consider supporting its development!",
+			cls: "setting-item-description",
+		});
+
+		const kofiLink = supportDiv.createEl("a", {
+			href: "https://ko-fi.com/F1F7WYJ6B",
+		});
+		kofiLink.createEl("img", {
+			attr: {
+				src: "https://ko-fi.com/img/githubbutton_sm.svg",
+				alt: "ko-fi",
+			},
+			cls: "ical-pro-kofi-img",
+		});
 	}
 
 	private renderStatusCard(containerEl: HTMLElement): void {

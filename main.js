@@ -461,7 +461,7 @@ var HeadingsHelper = class {
   }
 };
 
-// src/Logger.ts
+// src/Service/Logger.ts
 var _Logger = class _Logger {
   constructor(isDebug) {
     __publicField(this, "isDebug");
@@ -703,7 +703,7 @@ var TaskIndexingService = class {
   }
 };
 
-// src/FileClient.ts
+// src/Infrastructure/FileClient.ts
 var import_obsidian = require("obsidian");
 var FileClient = class {
   constructor(vault) {
@@ -731,7 +731,7 @@ var FileClient = class {
   }
 };
 
-// src/GistClient.ts
+// src/Infrastructure/GistClient.ts
 var import_obsidian2 = require("obsidian");
 var GistClient = class {
   constructor() {
@@ -1618,10 +1618,10 @@ var TaskIndex = class {
   }
 };
 
-// src/SettingsTab.ts
+// src/UI/SettingsTab.ts
 var import_obsidian4 = require("obsidian");
 
-// src/FolderSuggest.ts
+// src/UI/FolderSuggest.ts
 var import_obsidian3 = require("obsidian");
 var FolderSuggest = class extends import_obsidian3.AbstractInputSuggest {
   constructor(app, textInputEl) {
@@ -1651,7 +1651,7 @@ var FolderSuggest = class extends import_obsidian3.AbstractInputSuggest {
   }
 };
 
-// src/SettingsTab.ts
+// src/UI/SettingsTab.ts
 var SettingsTab = class extends import_obsidian4.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
@@ -1684,6 +1684,25 @@ var SettingsTab = class extends import_obsidian4.PluginSettingTab {
     this.renderFilteringSettings(containerEl);
     this.renderDestinationSettings(containerEl);
     this.renderAdvancedSettings(containerEl);
+    this.renderSupportSection(containerEl);
+  }
+  renderSupportSection(containerEl) {
+    this.addHeader(containerEl, "heart", "6. Support the Project");
+    const supportDiv = containerEl.createDiv({ cls: "ical-pro-support" });
+    supportDiv.createEl("p", {
+      text: "If iCal Pro helps you stay organized, consider supporting its development!",
+      cls: "setting-item-description"
+    });
+    const kofiLink = supportDiv.createEl("a", {
+      href: "https://ko-fi.com/F1F7WYJ6B"
+    });
+    kofiLink.createEl("img", {
+      attr: {
+        src: "https://ko-fi.com/img/githubbutton_sm.svg",
+        alt: "ko-fi"
+      },
+      cls: "ical-pro-kofi-img"
+    });
   }
   renderStatusCard(containerEl) {
     const statusCard = containerEl.createDiv({ cls: "ical-pro-status-card" });
@@ -2133,18 +2152,19 @@ var ObsidianIcalPlugin = class extends import_obsidian5.Plugin {
       new FileClient(this.app.vault),
       new GistClient()
     ]);
-    await this.rebuildIndex();
-    await this.saveSettings();
     this.registerVaultEvents();
-    this.syncIntervalId = this.syncAutomationService.configurePeriodicSync(
-      this.settings,
-      () => this.saveCalendar(),
-      (intervalId) => this.registerInterval(intervalId),
-      this.syncIntervalId
-    );
     this.registerUi();
     this.registerCommands();
-    void this.syncAutomationService.runStartupSyncIfReady(this.settings, () => this.saveCalendar());
+    this.app.workspace.onLayoutReady(async () => {
+      await this.rebuildIndex();
+      this.syncIntervalId = this.syncAutomationService.configurePeriodicSync(
+        this.settings,
+        () => this.saveCalendar(),
+        (intervalId) => this.registerInterval(intervalId),
+        this.syncIntervalId
+      );
+      void this.syncAutomationService.runStartupSyncIfReady(this.settings, () => this.saveCalendar());
+    });
   }
   async updateSettings(patch, options = {}) {
     const previousSettings = { ...this.settings };

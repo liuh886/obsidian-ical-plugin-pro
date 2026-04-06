@@ -155,6 +155,20 @@
     display: inline-block;
 }
 
+.ical-pro-support {
+    margin-top: 20px;
+    padding: 10px 0;
+}
+
+.ical-pro-kofi-img {
+    height: 36px;
+    transition: transform 0.2s ease;
+}
+
+.ical-pro-kofi-img:hover {
+    transform: scale(1.05);
+}
+
 /* --- Utility --- */
 .setting-item {
     padding: 12px 0;
