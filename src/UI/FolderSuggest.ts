@@ -1,4 +1,4 @@
-import { TFolder, AbstractInputSuggest, App } from "obsidian";
+import { TFolder, AbstractInputSuggest, App, TAbstractFile } from "obsidian";
 
 export class FolderSuggest extends AbstractInputSuggest<TFolder> {
     content: TFolder[];
@@ -14,7 +14,7 @@ export class FolderSuggest extends AbstractInputSuggest<TFolder> {
         const folders: TFolder[] = [];
         const lowerCaseInputStr = inputStr.toLowerCase();
 
-        abstractFiles.forEach((folder: any) => {
+        abstractFiles.forEach((folder: TAbstractFile) => {
             if (folder instanceof TFolder && folder.path.toLowerCase().includes(lowerCaseInputStr)) {
                 folders.push(folder);
             }

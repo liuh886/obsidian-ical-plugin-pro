@@ -15,12 +15,11 @@ export class Logger {
 		return Logger.instance;
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	public log(message: string, object?: any): void {
+	public log(message: string, object?: unknown): void {
 		if (this.isDebug) {
-			console.log("[" + new Date().toISOString() + "][info][ical] " + message);
+			console.debug("[" + new Date().toISOString() + "][info][ical] " + message);
 			if (object) {
-				console.log(object);
+				console.debug(object);
 			}
 		}
 	}
@@ -30,6 +29,6 @@ export function logger(isDebug?: boolean): Logger {
 	return Logger.getInstance(isDebug);
 }
 
-export function log(message: string, object?: any): void {
+export function log(message: string, object?: unknown): void {
 	return Logger.getInstance().log(message, object);
 }

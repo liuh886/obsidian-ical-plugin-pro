@@ -22,8 +22,7 @@ export class SettingsTab extends PluginSettingTab {
 
 		const header = containerEl.createDiv({ cls: "ical-pro-header" });
 		const headerText = header.createDiv({ cls: "ical-pro-header-title" });
-		headerText.createEl("h2", { text: "iCal Pro" });
-		headerText.createEl("span", { text: "v" + this.plugin.manifest.version, cls: "ical-pro-version" });
+		new Setting(headerText).setHeading().setName("iCal Pro").setDesc("v" + this.plugin.manifest.version);
 
 		const authorInfo = header.createDiv({ cls: "ical-pro-author" });
 		authorInfo.createSpan({ text: "by " });
@@ -34,7 +33,7 @@ export class SettingsTab extends PluginSettingTab {
 		});
 		authorInfo.createSpan({ text: " | " });
 		authorInfo.createEl("a", {
-			text: "GitHub Repository",
+			text: "GitHub repository",
 			href: "https://github.com/liuh886/obsidian-ical-plugin-pro",
 			cls: "ical-pro-repo-link",
 		});
@@ -49,7 +48,7 @@ export class SettingsTab extends PluginSettingTab {
 	}
 
 	private renderSupportSection(containerEl: HTMLElement): void {
-		this.addHeader(containerEl, "heart", "6. Support the Project");
+		this.addHeader(containerEl, "heart", "Support the project");
 
 		const supportDiv = containerEl.createDiv({ cls: "ical-pro-support" });
 		supportDiv.createEl("p", {
@@ -83,7 +82,7 @@ export class SettingsTab extends PluginSettingTab {
 		const syncCol = statusGrid.createDiv({ cls: "ical-pro-status-col" });
 		const syncTitle = syncCol.createDiv({ cls: "ical-pro-card-title" });
 		setIcon(syncTitle, "refresh-cw");
-		syncTitle.createSpan({ text: " Sync Status" });
+		syncTitle.createSpan({ text: " Sync status" });
 		const syncInfo = syncCol.createDiv({ cls: "ical-sync-info" });
 		syncInfo.createEl("div", { text: `Result: ${this.plugin.lastSyncStatus}`, cls: `ical-status-${this.plugin.lastSyncStatus.toLowerCase()}` });
 		syncInfo.createEl("div", { text: `At: ${this.plugin.lastSyncTime}`, cls: "ical-sync-time" });
@@ -131,7 +130,7 @@ export class SettingsTab extends PluginSettingTab {
 			});
 		}
 
-		const syncBtn = syncCol.createEl("button", { text: "Sync Now", cls: "mod-cta ical-sync-button" });
+		const syncBtn = syncCol.createEl("button", { text: "Sync now", cls: "mod-cta ical-sync-button" });
 		syncBtn.onClickEvent(async () => {
 			syncBtn.disabled = true;
 			syncBtn.setText("Syncing...");
@@ -144,7 +143,7 @@ export class SettingsTab extends PluginSettingTab {
 				this.display();
 			}
 		});
-		const diagnosticsBtn = syncCol.createEl("button", { text: "Copy Diagnostics", cls: "ical-sync-button" });
+		const diagnosticsBtn = syncCol.createEl("button", { text: "Copy diagnostics", cls: "ical-sync-button" });
 		diagnosticsBtn.onClickEvent(() => {
 			void navigator.clipboard.writeText(this.plugin.getDiagnosticsBundle());
 			new Notice("iCal Pro: Diagnostics copied.");
@@ -152,7 +151,7 @@ export class SettingsTab extends PluginSettingTab {
 	}
 
 	private renderTaskSourceSettings(containerEl: HTMLElement): void {
-		this.addHeader(containerEl, "search", "1. Scope & Discovery");
+		this.addHeader(containerEl, "search", "Scope and discovery");
 
 		containerEl.createEl("p", {
 			text: "Bind one source path to one category. Use multiple rules when you want different folders exported as different calendar categories.",
@@ -165,10 +164,10 @@ export class SettingsTab extends PluginSettingTab {
 		});
 
 		new Setting(containerEl)
-			.setName("Add Source Path")
+			.setName("Add source path")
 			.setDesc("Add another path/category rule.")
 			.addButton((button) =>
-				button.setButtonText("Add Path").onClick(async () => {
+				button.setButtonText("Add path").onClick(async () => {
 					await this.plugin.updateSettings(
 						{
 							sourceRules: [...this.plugin.settings.sourceRules, { path: "/", category: "" }],
@@ -181,10 +180,10 @@ export class SettingsTab extends PluginSettingTab {
 	}
 
 	private renderDateSettings(containerEl: HTMLElement): void {
-		this.addHeader(containerEl, "calendar-days", "2. Scheduling & Alarms");
+		this.addHeader(containerEl, "calendar-days", "Scheduling and alarms");
 
 		new Setting(containerEl)
-			.setName("Time-Block Logic (Day Planner)")
+			.setName("Time-block logic (Day Planner)")
 			.setDesc("If enabled, treats daily note headings as dates and task times as event start points.")
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.isDayPlannerPluginFormatEnabled).onChange(async (value) => {
@@ -196,7 +195,7 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Sync Strategy")
+			.setName("Sync strategy")
 			.setDesc("Define how dated tasks are mapped. Events are time-boxed; To-Dos are status-tracked.")
 			.addDropdown((dropdown) => {
 				Object.entries(INCLUDE_EVENTS_OR_TODOS).forEach(([value, label]) => dropdown.addOption(value, label));
@@ -206,7 +205,7 @@ export class SettingsTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("Multiple Date Handling")
+			.setName("Multiple date handling")
 			.setDesc("How to handle tasks that contain multiple start, scheduled, or due dates.")
 			.addDropdown((dropdown) => {
 				Object.entries(HOW_TO_PROCESS_MULTIPLE_DATES).forEach(([value, label]) => dropdown.addOption(value, label));
@@ -216,7 +215,7 @@ export class SettingsTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("Enable Native Notifications (VALARM)")
+			.setName("Enable native notifications (VALARM)")
 			.setDesc("Include alerts in your calendar app. Use the ⏰ emoji (e.g., - [ ] Task ⏰ 15) to set custom offsets in minutes.")
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.enableAlarms).onChange(async (value) => {
@@ -235,10 +234,10 @@ export class SettingsTab extends PluginSettingTab {
 	}
 
 	private renderFilteringSettings(containerEl: HTMLElement): void {
-		this.addHeader(containerEl, "filter", "3. Content & Filters");
+		this.addHeader(containerEl, "filter", "Content and filters");
 
 		new Setting(containerEl)
-			.setName("Respect Tasks Global Filter")
+			.setName("Respect tasks global filter")
 			.setDesc("Require these tags for a checkbox to count as a real task.")
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.respectGlobalTaskFilter).onChange(async (value) => {
@@ -246,7 +245,7 @@ export class SettingsTab extends PluginSettingTab {
 				}),
 			)
 			.addText((text) =>
-				text.setPlaceholder("#task").setValue(this.plugin.settings.globalTaskFilterTags).onChange(async (value) => {
+				text.setPlaceholder("#task").setValue(this.plugin.settings.globalTaskFilterTags).onChange((value) => {
 					this.scheduleUpdate("globalTaskFilterTags", () =>
 						this.plugin.updateSettings(
 							{ globalTaskFilterTags: value || "#task" },
@@ -257,7 +256,7 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Category Inclusion Filter")
+			.setName("Category inclusion filter")
 			.setDesc("Only export tasks whose derived categories match these values (space separated).")
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.isIncludeCategoriesEnabled).onChange(async (value) => {
@@ -265,7 +264,7 @@ export class SettingsTab extends PluginSettingTab {
 				}),
 			)
 			.addText((text) =>
-				text.setPlaceholder("Work travel/asia").setValue(this.plugin.settings.includeCategories).onChange(async (value) => {
+				text.setPlaceholder("Work travel/asia").setValue(this.plugin.settings.includeCategories).onChange((value) => {
 					this.scheduleUpdate("includeCategories", () =>
 						this.plugin.updateSettings(
 							{ includeCategories: value },
@@ -276,7 +275,7 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Category Exclusion Filter")
+			.setName("Category exclusion filter")
 			.setDesc("Hide tasks whose derived categories match these values.")
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.isExcludeCategoriesEnabled).onChange(async (value) => {
@@ -284,7 +283,7 @@ export class SettingsTab extends PluginSettingTab {
 				}),
 			)
 			.addText((text) =>
-				text.setPlaceholder("Personal archive").setValue(this.plugin.settings.excludeCategories).onChange(async (value) => {
+				text.setPlaceholder("Personal archive").setValue(this.plugin.settings.excludeCategories).onChange((value) => {
 					this.scheduleUpdate("excludeCategories", () =>
 						this.plugin.updateSettings(
 							{ excludeCategories: value },
@@ -295,7 +294,7 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Tag Inclusion Filter")
+			.setName("Tag inclusion filter")
 			.setDesc("Only sync tasks containing these tags (space separated).")
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.isIncludeTasksWithTags).onChange(async (value) => {
@@ -306,7 +305,7 @@ export class SettingsTab extends PluginSettingTab {
 				}),
 			)
 			.addText((text) =>
-				text.setPlaceholder("#work #sync").setValue(this.plugin.settings.includeTasksWithTags).onChange(async (value) => {
+				text.setPlaceholder("#work #sync").setValue(this.plugin.settings.includeTasksWithTags).onChange((value) => {
 					this.scheduleUpdate("includeTasksWithTags", () =>
 						this.plugin.updateSettings(
 							{ includeTasksWithTags: value },
@@ -317,7 +316,7 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Tag Exclusion Filter")
+			.setName("Tag exclusion filter")
 			.setDesc("Ignore tasks containing these tags.")
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.isExcludeTasksWithTags).onChange(async (value) => {
@@ -328,7 +327,7 @@ export class SettingsTab extends PluginSettingTab {
 				}),
 			)
 			.addText((text) =>
-				text.setPlaceholder("#private").setValue(this.plugin.settings.excludeTasksWithTags).onChange(async (value) => {
+				text.setPlaceholder("#private").setValue(this.plugin.settings.excludeTasksWithTags).onChange((value) => {
 					this.scheduleUpdate("excludeTasksWithTags", () =>
 						this.plugin.updateSettings(
 							{ excludeTasksWithTags: value },
@@ -339,7 +338,7 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Ignore Completed")
+			.setName("Ignore completed")
 			.setDesc("Do not sync tasks that are already marked as done.")
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.ignoreCompletedTasks).onChange(async (value) => {
@@ -349,13 +348,13 @@ export class SettingsTab extends PluginSettingTab {
 	}
 
 	private renderDestinationSettings(containerEl: HTMLElement): void {
-		this.addHeader(containerEl, "cloud", "4. Sync & Cloud Connectivity");
+		this.addHeader(containerEl, "cloud", "Sync and cloud connectivity");
 
 		new Setting(containerEl)
-			.setName("Calendar Filename")
+			.setName("Calendar filename")
 			.setDesc("Used for both local storage and GitHub Gist sync (e.g., obsidian.ics).")
 			.addText((text) =>
-				text.setPlaceholder("obsidian.ics").setValue(this.plugin.settings.filename).onChange(async (value) => {
+				text.setPlaceholder("obsidian.ics").setValue(this.plugin.settings.filename).onChange((value) => {
 					this.scheduleUpdate("filename", async () => {
 						await this.plugin.updateSettings({ filename: value || "obsidian.ics" });
 						this.updateUrlDisplay();
@@ -364,7 +363,7 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Save to Local File")
+			.setName("Save to local file")
 			.setDesc("Export the .ics file to your vault. Ideal for iCloud or local-first workflows.")
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.isSaveToFileEnabled).onChange(async (value) => {
@@ -373,11 +372,11 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Vault Storage Path")
+			.setName("Vault storage path")
 			.setDesc("Specify the folder for the local .ics file relative to vault root.")
 			.addText((text) => {
 				new FolderSuggest(this.app, text.inputEl);
-				text.setValue(this.plugin.settings.savePath).onChange(async (value) => {
+				text.setValue(this.plugin.settings.savePath).onChange((value) => {
 					this.scheduleUpdate("savePath", () =>
 						this.plugin.updateSettings({ savePath: normalizePath(value) || "/" }),
 					);
@@ -385,7 +384,7 @@ export class SettingsTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("Sync to GitHub Gist")
+			.setName("Sync to GitHub gist")
 			.setDesc("Push your calendar to a private Gist for public or multi-device subscription.")
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.isSaveToGistEnabled).onChange(async (value) => {
@@ -395,10 +394,10 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("GitHub Username")
+			.setName("GitHub username")
 			.setDesc("Used to build the raw subscription URL for your Gist export.")
 			.addText((text) =>
-				text.setValue(this.plugin.settings.githubUsername).onChange(async (value) => {
+				text.setValue(this.plugin.settings.githubUsername).onChange((value) => {
 					this.scheduleUpdate("githubUsername", async () => {
 						await this.plugin.updateSettings({ githubUsername: value });
 						this.updateUrlDisplay();
@@ -410,7 +409,7 @@ export class SettingsTab extends PluginSettingTab {
 			.setName("Gist ID")
 			.setDesc("The unique ID at the end of your Gist URL, used as the sync target.")
 			.addText((text) =>
-				text.setValue(this.plugin.settings.githubGistId).onChange(async (value) => {
+				text.setValue(this.plugin.settings.githubGistId).onChange((value) => {
 					this.scheduleUpdate("githubGistId", async () => {
 						await this.plugin.updateSettings({ githubGistId: value });
 						this.updateUrlDisplay();
@@ -419,10 +418,10 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Personal Access Token")
+			.setName("Personal access token")
 			.setDesc("GitHub PAT with 'gist' scope.")
 			.addText((text) =>
-				text.setPlaceholder("ghp_...").setValue(this.plugin.settings.githubPersonalAccessToken).onChange(async (value) => {
+				text.setPlaceholder("ghp_...").setValue(this.plugin.settings.githubPersonalAccessToken).onChange((value) => {
 					this.scheduleUpdate("githubPersonalAccessToken", () =>
 						this.plugin.updateSettings({ githubPersonalAccessToken: value }),
 					);
@@ -430,7 +429,7 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Validate Gist Connection")
+			.setName("Validate gist connection")
 			.setDesc("Test whether the configured token and Gist ID are reachable.")
 			.addButton((button) =>
 				button.setButtonText("Validate").onClick(async () => {
@@ -445,10 +444,10 @@ export class SettingsTab extends PluginSettingTab {
 	}
 
 	private renderAdvancedSettings(containerEl: HTMLElement): void {
-		this.addHeader(containerEl, "sliders", "5. Advanced & Diagnostics");
+		this.addHeader(containerEl, "sliders", "Advanced and diagnostics");
 
 		new Setting(containerEl)
-			.setName("Summary Formatting")
+			.setName("Summary formatting")
 			.setDesc("Choose how [[Wiki Links]] and [Markdown Links] should be rendered in the calendar.")
 			.addDropdown((dropdown) => {
 				Object.entries(HOW_TO_PARSE_INTERNAL_LINKS).forEach(([value, label]) => dropdown.addOption(value, label));
@@ -461,7 +460,7 @@ export class SettingsTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("Obsidian Link Placement")
+			.setName("Obsidian link placement")
 			.setDesc("Where to place the 'obsidian://open' callback link in calendar entries.")
 			.addDropdown((dropdown) => {
 				Object.entries(LINK_PLACEMENT).forEach(([value, label]) => dropdown.addOption(value, label));
@@ -471,7 +470,7 @@ export class SettingsTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("Auto-Sync Interval")
+			.setName("Auto-sync interval")
 			.setDesc("Frequency (in minutes) at which the calendar is regenerated and pushed.")
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.isPeriodicSaveEnabled).onChange(async (value) => {
@@ -490,7 +489,7 @@ export class SettingsTab extends PluginSettingTab {
 
 
 		new Setting(containerEl)
-			.setName("Debug Mode")
+			.setName("Debug mode")
 			.setDesc("Enable verbose logging in the console (Ctrl+Shift+I).")
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.isDebug).onChange(async (value) => {
@@ -508,7 +507,7 @@ export class SettingsTab extends PluginSettingTab {
 		const header = el.createDiv({ cls: "ical-pro-section-header" });
 		const iconEl = header.createDiv({ cls: "ical-pro-section-icon" });
 		setIcon(iconEl, icon);
-		header.createEl("h3", { text });
+		new Setting(header).setHeading().setName(text);
 	}
 
 	private updateUrlDisplay(): void {
@@ -564,14 +563,14 @@ export class SettingsTab extends PluginSettingTab {
 
 	private renderSourceRuleSetting(containerEl: HTMLElement, rule: TaskSourceRule, index: number): void {
 		new Setting(containerEl)
-			.setName(`Source Path ${index + 1}`)
+			.setName(`Source path ${index + 1}`)
 			.setDesc("Tasks in this path inherit the configured category.")
 			.addText((text) => {
 				new FolderSuggest(this.app, text.inputEl);
 				text
 					.setPlaceholder("/")
 					.setValue(rule.path)
-					.onChange(async (value) => {
+					.onChange((value) => {
 						this.scheduleSourceRuleUpdate(index, { path: normalizePath(value) || "/" });
 					});
 			})
@@ -579,7 +578,7 @@ export class SettingsTab extends PluginSettingTab {
 				text
 					.setPlaceholder("Work")
 					.setValue(rule.category)
-					.onChange(async (value) => {
+					.onChange((value) => {
 						this.scheduleSourceRuleUpdate(index, { category: value });
 					}),
 			)

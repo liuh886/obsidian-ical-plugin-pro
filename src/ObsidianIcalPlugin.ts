@@ -212,7 +212,7 @@ export default class ObsidianIcalPlugin extends Plugin {
 	}
 
 	private registerUi(): void {
-		this.addRibbonIcon("calendar-with-checkmark", "iCal Pro: Sync Now", async () => {
+		this.addRibbonIcon("calendar-with-checkmark", "iCal Pro: Sync now", async () => {
 			await this.runSyncWithNotice("iCal Pro: Starting synchronization...", "iCal Pro: Sync completed successfully!");
 		});
 
@@ -222,7 +222,7 @@ export default class ObsidianIcalPlugin extends Plugin {
 	private registerCommands(): void {
 		this.addCommand({
 			id: "save-calendar",
-			name: "Save and Sync calendar",
+			name: "Save and sync calendar",
 			callback: async () => {
 				await this.runSyncWithNotice("iCal Pro: Syncing...", "iCal Pro: Sync done.");
 			},
@@ -230,7 +230,7 @@ export default class ObsidianIcalPlugin extends Plugin {
 
 		this.addCommand({
 			id: "open-gist-url",
-			name: "Open Gist URL in browser",
+			name: "Open gist URL in browser",
 			callback: () => {
 				const { githubUsername, githubGistId } = this.settings;
 				if (!githubUsername || !githubGistId) {

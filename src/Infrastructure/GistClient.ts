@@ -21,10 +21,10 @@ export class GistClient implements CalendarDestination {
 		const fname = filename || "obsidian.ics";
 		
 		if (isDebug) {
-			console.log("iCal Pro: Starting Gist Sync...");
-			console.log(`iCal Pro: Target Gist ID: ${githubGistId}`);
-			console.log(`iCal Pro: Target Filename: ${fname}`);
-			console.log(`iCal Pro: Content Length: ${calendarContent.length} chars`);
+			console.debug("iCal Pro: Starting Gist Sync...");
+			console.debug(`iCal Pro: Target Gist ID: ${githubGistId}`);
+			console.debug(`iCal Pro: Target Filename: ${fname}`);
+			console.debug(`iCal Pro: Content Length: ${calendarContent.length} chars`);
 		}
 
 		try {
@@ -46,7 +46,7 @@ export class GistClient implements CalendarDestination {
 			});
 
 			if (response.status === 200) {
-				if (isDebug) console.log("iCal Pro: Gist updated successfully!");
+				if (isDebug) console.debug("iCal Pro: Gist updated successfully!");
 			} else {
 				const errorMsg = `GitHub API Error ${response.status}: ${response.text}`;
 				console.error("iCal Pro: Gist Update Failed.", errorMsg);
