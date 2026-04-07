@@ -167,8 +167,8 @@ var HOW_TO_PARSE_INTERNAL_LINKS = {
 };
 var INCLUDE_EVENTS_OR_TODOS = {
   EventsOnly: "Events only",
-  EventsAndTodos: "Events and TODO items",
-  TodosOnly: "TODO items only"
+  EventsAndTodos: "Events and todo items",
+  TodosOnly: "Todo items only"
 };
 var HOW_TO_PROCESS_MULTIPLE_DATES = {
   PreferDueDate: "Prefer due date (default)",
@@ -178,7 +178,7 @@ var HOW_TO_PROCESS_MULTIPLE_DATES = {
 var LINK_PLACEMENT = {
   Description: "Description only",
   Location: "Location only",
-  Both: "Description & Location"
+  Both: "Description and location"
 };
 var DEFAULT_SETTINGS = {
   githubPersonalAccessToken: "",
@@ -1762,17 +1762,19 @@ var SettingsTab = class extends import_obsidian4.PluginSettingTab {
       });
     }
     const syncBtn = syncCol.createEl("button", { text: "Sync now", cls: "mod-cta ical-sync-button" });
-    syncBtn.onClickEvent(async () => {
-      syncBtn.disabled = true;
-      syncBtn.setText("Syncing...");
-      try {
-        await this.plugin.saveCalendar();
-        new import_obsidian4.Notice("iCal Pro: Sync successful!");
-      } catch (e) {
-        new import_obsidian4.Notice(`iCal Pro: Sync failed. ${this.plugin.lastSyncMessage}`);
-      } finally {
-        this.display();
-      }
+    syncBtn.onClickEvent(() => {
+      void (async () => {
+        syncBtn.disabled = true;
+        syncBtn.setText("Syncing...");
+        try {
+          await this.plugin.saveCalendar();
+          new import_obsidian4.Notice("iCal Pro: Sync successful!");
+        } catch (e) {
+          new import_obsidian4.Notice(`iCal Pro: Sync failed. ${this.plugin.lastSyncMessage}`);
+        } finally {
+          this.display();
+        }
+      })();
     });
     const diagnosticsBtn = syncCol.createEl("button", { text: "Copy diagnostics", cls: "ical-sync-button" });
     diagnosticsBtn.onClickEvent(() => {
@@ -1791,20 +1793,22 @@ var SettingsTab = class extends import_obsidian4.PluginSettingTab {
       this.renderSourceRuleSetting(rulesContainer, rule, index);
     });
     new import_obsidian4.Setting(containerEl).setName("Add source path").setDesc("Add another path/category rule.").addButton(
-      (button) => button.setButtonText("Add path").onClick(async () => {
-        await this.plugin.updateSettings(
-          {
-            sourceRules: [...this.plugin.settings.sourceRules, { path: "/", category: "" }]
-          },
-          { rebuildIndex: true }
-        );
-        this.display();
+      (button) => button.setButtonText("Add path").onClick(() => {
+        void (async () => {
+          await this.plugin.updateSettings(
+            {
+              sourceRules: [...this.plugin.settings.sourceRules, { path: "/", category: "" }]
+            },
+            { rebuildIndex: true }
+          );
+          this.display();
+        })();
       })
     );
   }
   renderDateSettings(containerEl) {
     this.addHeader(containerEl, "calendar-days", "Scheduling and alarms");
-    new import_obsidian4.Setting(containerEl).setName("Time-block logic (Day Planner)").setDesc("If enabled, treats daily note headings as dates and task times as event start points.").addToggle(
+    new import_obsidian4.Setting(containerEl).setName("Time-block logic (Day planner)").setDesc("If enabled, treats daily note headings as dates and task times as event start points.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.isDayPlannerPluginFormatEnabled).onChange(async (value) => {
         await this.plugin.updateSettings(
           { isDayPlannerPluginFormatEnabled: value },
@@ -1812,7 +1816,7 @@ var SettingsTab = class extends import_obsidian4.PluginSettingTab {
         );
       })
     );
-    new import_obsidian4.Setting(containerEl).setName("Sync strategy").setDesc("Define how dated tasks are mapped. Events are time-boxed; To-Dos are status-tracked.").addDropdown((dropdown) => {
+    new import_obsidian4.Setting(containerEl).setName("Sync strategy").setDesc("Define how dated tasks are mapped. Events are time-boxed; to-dos are status-tracked.").addDropdown((dropdown) => {
       Object.entries(INCLUDE_EVENTS_OR_TODOS).forEach(([value, label]) => dropdown.addOption(value, label));
       dropdown.setValue(this.plugin.settings.includeEventsOrTodos).onChange(async (value) => {
         await this.plugin.updateSettings({ includeEventsOrTodos: value });
@@ -1947,7 +1951,7 @@ var SettingsTab = class extends import_obsidian4.PluginSettingTab {
         );
       });
     });
-    new import_obsidian4.Setting(containerEl).setName("Sync to GitHub gist").setDesc("Push your calendar to a private Gist for public or multi-device subscription.").addToggle(
+    new import_obsidian4.Setting(containerEl).setName("Sync to GitHub Gist").setDesc("Push your calendar to a private Gist for public or multi-device subscription.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.isSaveToGistEnabled).onChange(async (value) => {
         await this.plugin.updateSettings({ isSaveToGistEnabled: value });
         this.updateUrlDisplay();
@@ -1977,20 +1981,22 @@ var SettingsTab = class extends import_obsidian4.PluginSettingTab {
         );
       })
     );
-    new import_obsidian4.Setting(containerEl).setName("Validate gist connection").setDesc("Test whether the configured token and Gist ID are reachable.").addButton(
-      (button) => button.setButtonText("Validate").onClick(async () => {
-        button.setDisabled(true);
-        button.setButtonText("Checking...");
-        const result = await this.plugin.validateConnection();
-        new import_obsidian4.Notice(result.message);
-        button.setDisabled(false);
-        button.setButtonText("Validate");
+    new import_obsidian4.Setting(containerEl).setName("Validate Gist connection").setDesc("Test whether the configured token and Gist ID are reachable.").addButton(
+      (button) => button.setButtonText("Validate").onClick(() => {
+        void (async () => {
+          button.setDisabled(true);
+          button.setButtonText("Checking...");
+          const result = await this.plugin.validateConnection();
+          new import_obsidian4.Notice(result.message);
+          button.setDisabled(false);
+          button.setButtonText("Validate");
+        })();
       })
     );
   }
   renderAdvancedSettings(containerEl) {
     this.addHeader(containerEl, "sliders", "Advanced and diagnostics");
-    new import_obsidian4.Setting(containerEl).setName("Summary formatting").setDesc("Choose how [[Wiki Links]] and [Markdown Links] should be rendered in the calendar.").addDropdown((dropdown) => {
+    new import_obsidian4.Setting(containerEl).setName("Summary formatting").setDesc("Choose how [[Wiki links]] and [Markdown links] should be rendered in the calendar.").addDropdown((dropdown) => {
       Object.entries(HOW_TO_PARSE_INTERNAL_LINKS).forEach(([value, label]) => dropdown.addOption(value, label));
       dropdown.setValue(this.plugin.settings.howToParseInternalLinks).onChange(async (value) => {
         await this.plugin.updateSettings(
@@ -2081,15 +2087,17 @@ var SettingsTab = class extends import_obsidian4.PluginSettingTab {
         this.scheduleSourceRuleUpdate(index, { category: value });
       })
     ).addExtraButton(
-      (button) => button.setIcon("trash").setTooltip("Remove path rule").onClick(async () => {
-        const sourceRules = this.plugin.settings.sourceRules.filter((_, ruleIndex) => ruleIndex !== index);
-        await this.plugin.updateSettings(
-          {
-            sourceRules: sourceRules.length > 0 ? sourceRules : [{ path: "/", category: "" }]
-          },
-          { rebuildIndex: true }
-        );
-        this.display();
+      (button) => button.setIcon("trash").setTooltip("Remove path rule").onClick(() => {
+        void (async () => {
+          const sourceRules = this.plugin.settings.sourceRules.filter((_, ruleIndex) => ruleIndex !== index);
+          await this.plugin.updateSettings(
+            {
+              sourceRules: sourceRules.length > 0 ? sourceRules : [{ path: "/", category: "" }]
+            },
+            { rebuildIndex: true }
+          );
+          this.display();
+        })();
       })
     );
   }
@@ -2137,7 +2145,7 @@ var ObsidianIcalPlugin = class extends import_obsidian5.Plugin {
   async onload() {
     await this.loadSettings();
     logger(this.settings.isDebug);
-    logger().log("Loading Obsidian iCal Plugin Pro");
+    logger().log("Loading iCal Pro");
     this.taskFinder = new TaskFinder(this.app.vault);
     this.taskIndexService = new TaskIndexingService(
       this.app.vault,
@@ -2245,7 +2253,7 @@ var ObsidianIcalPlugin = class extends import_obsidian5.Plugin {
           destinationResults: []
         });
       }
-      console.error("iCal Pro: Sync Error Details:", error);
+      console.error("iCal Pro: Sync error details:", error);
       throw error;
     } finally {
       await this.saveSettings();
@@ -2295,11 +2303,11 @@ var ObsidianIcalPlugin = class extends import_obsidian5.Plugin {
     });
     this.addCommand({
       id: "open-gist-url",
-      name: "Open gist URL in browser",
+      name: "Open Gist URL in browser",
       callback: () => {
         const { githubUsername, githubGistId } = this.settings;
         if (!githubUsername || !githubGistId) {
-          new import_obsidian5.Notice("GitHub Sync not fully configured.");
+          new import_obsidian5.Notice("GitHub sync not fully configured.");
           return;
         }
         window.open(`https://gist.github.com/${githubUsername}/${githubGistId}`, "_blank");
@@ -2331,6 +2339,13 @@ var ObsidianIcalPlugin = class extends import_obsidian5.Plugin {
   getErrorMessage(error) {
     if (error instanceof Error) {
       return error.message;
+    }
+    if (typeof error === "object" && error !== null) {
+      try {
+        return JSON.stringify(error);
+      } catch (e) {
+        return "Unknown error object";
+      }
     }
     return String(error);
   }

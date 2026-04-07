@@ -1,6 +1,6 @@
 {
   "name": "ical-plugin-pro",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Sync tasks to Google, Apple, and Outlook calendars via a standards-compliant iCalendar (ICS) feed with smart date inheritance.",
   "main": "main.js",
   "scripts": {
