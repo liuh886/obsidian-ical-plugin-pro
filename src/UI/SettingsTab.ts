@@ -131,17 +131,19 @@ export class SettingsTab extends PluginSettingTab {
 		}
 
 		const syncBtn = syncCol.createEl("button", { text: "Sync now", cls: "mod-cta ical-sync-button" });
-		syncBtn.onClickEvent(async () => {
-			syncBtn.disabled = true;
-			syncBtn.setText("Syncing...");
-			try {
-				await this.plugin.saveCalendar();
-				new Notice("iCal Pro: Sync successful!");
-			} catch {
-				new Notice(`iCal Pro: Sync failed. ${this.plugin.lastSyncMessage}`);
-			} finally {
-				this.display();
-			}
+		syncBtn.onClickEvent(() => {
+			void (async () => {
+				syncBtn.disabled = true;
+				syncBtn.setText("Syncing...");
+				try {
+					await this.plugin.saveCalendar();
+					new Notice("iCal Pro: Sync successful!");
+				} catch {
+					new Notice(`iCal Pro: Sync failed. ${this.plugin.lastSyncMessage}`);
+				} finally {
+					this.display();
+				}
+			})();
 		});
 		const diagnosticsBtn = syncCol.createEl("button", { text: "Copy diagnostics", cls: "ical-sync-button" });
 		diagnosticsBtn.onClickEvent(() => {
@@ -167,14 +169,16 @@ export class SettingsTab extends PluginSettingTab {
 			.setName("Add source path")
 			.setDesc("Add another path/category rule.")
 			.addButton((button) =>
-				button.setButtonText("Add path").onClick(async () => {
-					await this.plugin.updateSettings(
-						{
-							sourceRules: [...this.plugin.settings.sourceRules, { path: "/", category: "" }],
-						},
-						{ rebuildIndex: true },
-					);
-					this.display();
+				button.setButtonText("Add path").onClick(() => {
+					void (async () => {
+						await this.plugin.updateSettings(
+							{
+								sourceRules: [...this.plugin.settings.sourceRules, { path: "/", category: "" }],
+							},
+							{ rebuildIndex: true },
+						);
+						this.display();
+					})();
 				}),
 			);
 	}
@@ -183,7 +187,7 @@ export class SettingsTab extends PluginSettingTab {
 		this.addHeader(containerEl, "calendar-days", "Scheduling and alarms");
 
 		new Setting(containerEl)
-			.setName("Time-block logic (Day Planner)")
+			.setName("Time-block logic (Day planner)")
 			.setDesc("If enabled, treats daily note headings as dates and task times as event start points.")
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.isDayPlannerPluginFormatEnabled).onChange(async (value) => {
@@ -196,7 +200,7 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Sync strategy")
-			.setDesc("Define how dated tasks are mapped. Events are time-boxed; To-Dos are status-tracked.")
+			.setDesc("Define how dated tasks are mapped. Events are time-boxed; to-dos are status-tracked.")
 			.addDropdown((dropdown) => {
 				Object.entries(INCLUDE_EVENTS_OR_TODOS).forEach(([value, label]) => dropdown.addOption(value, label));
 				dropdown.setValue(this.plugin.settings.includeEventsOrTodos).onChange(async (value) => {
@@ -384,7 +388,7 @@ export class SettingsTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("Sync to GitHub gist")
+			.setName("Sync to GitHub Gist")
 			.setDesc("Push your calendar to a private Gist for public or multi-device subscription.")
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.isSaveToGistEnabled).onChange(async (value) => {
@@ -429,16 +433,18 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Validate gist connection")
+			.setName("Validate Gist connection")
 			.setDesc("Test whether the configured token and Gist ID are reachable.")
 			.addButton((button) =>
-				button.setButtonText("Validate").onClick(async () => {
-					button.setDisabled(true);
-					button.setButtonText("Checking...");
-					const result = await this.plugin.validateConnection();
-					new Notice(result.message);
-					button.setDisabled(false);
-					button.setButtonText("Validate");
+				button.setButtonText("Validate").onClick(() => {
+					void (async () => {
+						button.setDisabled(true);
+						button.setButtonText("Checking...");
+						const result = await this.plugin.validateConnection();
+						new Notice(result.message);
+						button.setDisabled(false);
+						button.setButtonText("Validate");
+					})();
 				}),
 			);
 	}
@@ -448,7 +454,7 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Summary formatting")
-			.setDesc("Choose how [[Wiki Links]] and [Markdown Links] should be rendered in the calendar.")
+			.setDesc("Choose how [[Wiki links]] and [Markdown links] should be rendered in the calendar.")
 			.addDropdown((dropdown) => {
 				Object.entries(HOW_TO_PARSE_INTERNAL_LINKS).forEach(([value, label]) => dropdown.addOption(value, label));
 				dropdown.setValue(this.plugin.settings.howToParseInternalLinks).onChange(async (value) => {
@@ -586,15 +592,17 @@ export class SettingsTab extends PluginSettingTab {
 				button
 					.setIcon("trash")
 					.setTooltip("Remove path rule")
-					.onClick(async () => {
-								const sourceRules = this.plugin.settings.sourceRules.filter((_, ruleIndex) => ruleIndex !== index);
-						await this.plugin.updateSettings(
-							{
-								sourceRules: sourceRules.length > 0 ? sourceRules : [{ path: "/", category: "" }],
-							},
-							{ rebuildIndex: true },
-						);
-						this.display();
+					.onClick(() => {
+						void (async () => {
+							const sourceRules = this.plugin.settings.sourceRules.filter((_, ruleIndex) => ruleIndex !== index);
+							await this.plugin.updateSettings(
+								{
+									sourceRules: sourceRules.length > 0 ? sourceRules : [{ path: "/", category: "" }],
+								},
+								{ rebuildIndex: true },
+							);
+							this.display();
+						})();
 					}),
 			);
 	}

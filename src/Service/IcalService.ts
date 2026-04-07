@@ -104,14 +104,14 @@ export class IcalService {
 		
 		builder.addEventProperty("SUMMARY", this.getSummary(task, prepend));
 		if (task.getPriority() !== null) builder.addEventProperty("PRIORITY", String(task.getPriority()), false);
-		if (task.getRecurrenceRule()) builder.addEventProperty("RRULE", task.getRecurrenceRule()!, false);
+		if (task.getRecurrenceRule()) builder.addEventProperty("RRULE", task.getRecurrenceRule(), false);
 		if (task.getCategories().length > 0) builder.addEventProperty("CATEGORIES", task.getCategories().join(","), false);
 		if (task.status === TaskStatus.Cancelled) builder.addEventProperty("STATUS", "CANCELLED", false);
 		const description = this.getDescription(task, settings);
 		if (description) builder.addEventProperty("DESCRIPTION", description);
 		if (this.shouldIncludeLocation(settings)) builder.addEventProperty("LOCATION", task.getLocation());
 		if (hasTime && task.getDurationMinutes()) {
-			const endDate = this.addMinutes(task.getRawDate("Due") ?? task.getRawDate("Start"), task.getDurationMinutes()!);
+			const endDate = this.addMinutes(task.getRawDate("Due") ?? task.getRawDate("Start"), task.getDurationMinutes());
 			if (endDate) builder.addEventProperty(`DTEND;TZID=${timezone}`, this.formatDateTime(endDate), false);
 		}
 
@@ -127,7 +127,7 @@ export class IcalService {
 			builder.addEventProperty("UID", task.getId(), false);
 			builder.addEventProperty("SUMMARY", this.getSummary(task));
 			if (task.getPriority() !== null) builder.addEventProperty("PRIORITY", String(task.getPriority()), false);
-			if (task.getRecurrenceRule()) builder.addEventProperty("RRULE", task.getRecurrenceRule()!, false);
+			if (task.getRecurrenceRule()) builder.addEventProperty("RRULE", task.getRecurrenceRule(), false);
 			if (task.getCategories().length > 0) builder.addEventProperty("CATEGORIES", task.getCategories().join(","), false);
 			const status = this.getTodoStatus(task);
 			if (status) builder.addEventProperty("STATUS", status, false);
@@ -143,7 +143,7 @@ export class IcalService {
 				}
 			}
 			if (task.status === TaskStatus.Done && task.getCompletedAt()) {
-				builder.addEventProperty("COMPLETED", this.formatUtcDateTime(task.getCompletedAt()!), false);
+				builder.addEventProperty("COMPLETED", this.formatUtcDateTime(task.getCompletedAt()), false);
 			}
 
 			const description = this.getDescription(task, settings);

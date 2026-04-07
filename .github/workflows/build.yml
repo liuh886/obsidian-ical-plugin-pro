@@ -6,6 +6,9 @@ on:
       - main
     tags:
       - "*"
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build:
@@ -35,3 +38,14 @@ jobs:
             main.js
             manifest.json
             styles.css
+
+      - name: Release Assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            main.js
+            manifest.json
+            styles.css
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

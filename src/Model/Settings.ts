@@ -53,8 +53,8 @@ export const HOW_TO_PARSE_INTERNAL_LINKS = {
 
 export const INCLUDE_EVENTS_OR_TODOS = {
 	EventsOnly: "Events only",
-	EventsAndTodos: "Events and TODO items",
-	TodosOnly: "TODO items only",
+	EventsAndTodos: "Events and todo items",
+	TodosOnly: "Todo items only",
 };
 
 export const HOW_TO_PROCESS_MULTIPLE_DATES = {
@@ -66,7 +66,7 @@ export const HOW_TO_PROCESS_MULTIPLE_DATES = {
 export const LINK_PLACEMENT = {
 	Description: "Description only",
 	Location: "Location only",
-	Both: "Description & Location",
+	Both: "Description and location",
 };
 
 export const DEFAULT_SETTINGS: Settings = {

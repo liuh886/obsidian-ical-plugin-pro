@@ -47,7 +47,7 @@ export default class ObsidianIcalPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		logger(this.settings.isDebug);
-		logger().log("Loading Obsidian iCal Plugin Pro");
+		logger().log("Loading iCal Pro");
 		this.taskFinder = new TaskFinder(this.app.vault);
 		this.taskIndexService = new TaskIndexingService(
 			this.app.vault,
@@ -171,7 +171,7 @@ export default class ObsidianIcalPlugin extends Plugin {
 					destinationResults: [],
 				});
 			}
-			console.error("iCal Pro: Sync Error Details:", error);
+			console.error("iCal Pro: Sync error details:", error);
 			throw error;
 		} finally {
 			await this.saveSettings();
@@ -230,11 +230,11 @@ export default class ObsidianIcalPlugin extends Plugin {
 
 		this.addCommand({
 			id: "open-gist-url",
-			name: "Open gist URL in browser",
+			name: "Open Gist URL in browser",
 			callback: () => {
 				const { githubUsername, githubGistId } = this.settings;
 				if (!githubUsername || !githubGistId) {
-					new Notice("GitHub Sync not fully configured.");
+					new Notice("GitHub sync not fully configured.");
 					return;
 				}
 
@@ -272,6 +272,14 @@ export default class ObsidianIcalPlugin extends Plugin {
 	private getErrorMessage(error: unknown): string {
 		if (error instanceof Error) {
 			return error.message;
+		}
+
+		if (typeof error === "object" && error !== null) {
+			try {
+				return JSON.stringify(error);
+			} catch {
+				return "Unknown error object";
+			}
 		}
 
 		return String(error);
