@@ -396,7 +396,7 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Save to local file")
-			.setDesc("Export the .ics file to your vault. Ideal for iCloud or local-first workflows.")
+			.setDesc("Export the .ics file to your vault for local sync workflows.")
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.isSaveToFileEnabled).onChange((value) => {
 					this.runAsync(() => this.plugin.updateSettings({ isSaveToFileEnabled: value }));

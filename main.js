@@ -313,7 +313,10 @@ var SyncAutomationService = class {
     if (error instanceof Error) {
       return error.message;
     }
-    return String(error);
+    if (typeof error === "string" || typeof error === "number" || typeof error === "boolean" || typeof error === "bigint" || typeof error === "symbol" || typeof error === "undefined") {
+      return String(error);
+    }
+    return "Unknown error";
   }
 };
 
@@ -1963,7 +1966,7 @@ var SettingsTab = class extends import_obsidian4.PluginSettingTab {
         });
       })
     );
-    new import_obsidian4.Setting(containerEl).setName("Save to local file").setDesc("Export the .ics file to your vault. Ideal for iCloud or local-first workflows.").addToggle(
+    new import_obsidian4.Setting(containerEl).setName("Save to local file").setDesc("Export the .ics file to your vault for local sync workflows.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.isSaveToFileEnabled).onChange((value) => {
         this.runAsync(() => this.plugin.updateSettings({ isSaveToFileEnabled: value }));
       })

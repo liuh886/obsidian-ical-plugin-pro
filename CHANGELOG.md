@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.4] - 2026-04-08
+- Fixed the remaining review-bot issue in sync automation error handling.
+- Normalized the last settings description that still violated Obsidian UI sentence case checks.
+- Rebuilt the release bundle so the shipped assets match the final review-safe source.
+
 ## [2.1.3] - 2026-04-08
 - Refined plugin and settings UI copy to satisfy Obsidian review requirements.
 - Fixed async callback and error-stringification issues flagged by ObsidianReviewBot.

@@ -48,6 +48,17 @@ export class SyncAutomationService {
 			return error.message;
 		}
 
-		return String(error);
+		if (
+			typeof error === "string"
+			|| typeof error === "number"
+			|| typeof error === "boolean"
+			|| typeof error === "bigint"
+			|| typeof error === "symbol"
+			|| typeof error === "undefined"
+		) {
+			return String(error);
+		}
+
+		return "Unknown error";
 	}
 }
