@@ -23,7 +23,7 @@ export class SyncAutomationService {
 
 		const intervalId = window.setInterval(() => {
 			void runSync().catch((error) => {
-				console.error("iCal Pro: Periodic sync failed", error);
+				console.error(`iCal Pro: periodic sync failed: ${this.getErrorMessage(error)}`);
 			});
 		}, settings.periodicSaveInterval * 60 * 1000);
 
@@ -39,7 +39,15 @@ export class SyncAutomationService {
 		try {
 			await runSync();
 		} catch (error) {
-			console.error("iCal Pro: Startup sync failed", error);
+			console.error(`iCal Pro: startup sync failed: ${this.getErrorMessage(error)}`);
 		}
+	}
+
+	private getErrorMessage(error: unknown): string {
+		if (error instanceof Error) {
+			return error.message;
+		}
+
+		return String(error);
 	}
 }

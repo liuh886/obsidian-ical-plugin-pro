@@ -2,12 +2,32 @@ import { App, Notice, PluginSettingTab, Setting, normalizePath, setIcon } from "
 import ObsidianIcalPlugin from "../ObsidianIcalPlugin";
 import { FolderSuggest } from "./FolderSuggest";
 import {
+	CalendarEntryMode,
 	HOW_TO_PARSE_INTERNAL_LINKS,
 	HOW_TO_PROCESS_MULTIPLE_DATES,
 	INCLUDE_EVENTS_OR_TODOS,
+	InternalLinkMode,
 	LINK_PLACEMENT,
+	LinkPlacement,
+	MultipleDateMode,
 	TaskSourceRule,
 } from "../Model/Settings";
+
+function isCalendarEntryMode(value: string): value is CalendarEntryMode {
+	return Object.prototype.hasOwnProperty.call(INCLUDE_EVENTS_OR_TODOS, value);
+}
+
+function isMultipleDateMode(value: string): value is MultipleDateMode {
+	return Object.prototype.hasOwnProperty.call(HOW_TO_PROCESS_MULTIPLE_DATES, value);
+}
+
+function isInternalLinkMode(value: string): value is InternalLinkMode {
+	return Object.prototype.hasOwnProperty.call(HOW_TO_PARSE_INTERNAL_LINKS, value);
+}
+
+function isLinkPlacement(value: string): value is LinkPlacement {
+	return Object.prototype.hasOwnProperty.call(LINK_PLACEMENT, value);
+}
 
 export class SettingsTab extends PluginSettingTab {
 	private readonly pendingUpdates = new Map<string, number>();
@@ -22,12 +42,12 @@ export class SettingsTab extends PluginSettingTab {
 
 		const header = containerEl.createDiv({ cls: "ical-pro-header" });
 		const headerText = header.createDiv({ cls: "ical-pro-header-title" });
-		new Setting(headerText).setHeading().setName("iCal Pro").setDesc("v" + this.plugin.manifest.version);
+		new Setting(headerText).setHeading().setName("Calendar sync").setDesc("v" + this.plugin.manifest.version);
 
 		const authorInfo = header.createDiv({ cls: "ical-pro-author" });
 		authorInfo.createSpan({ text: "by " });
 		authorInfo.createEl("a", {
-			text: "liuh886",
+			text: "Liuh886",
 			href: "https://github.com/liuh886",
 			cls: "ical-pro-author-link",
 		});
@@ -52,7 +72,7 @@ export class SettingsTab extends PluginSettingTab {
 
 		const supportDiv = containerEl.createDiv({ cls: "ical-pro-support" });
 		supportDiv.createEl("p", {
-			text: "If iCal Pro helps you stay organized, consider supporting its development!",
+			text: "If this plugin helps you stay organized, consider supporting its development.",
 			cls: "setting-item-description",
 		});
 
@@ -132,23 +152,23 @@ export class SettingsTab extends PluginSettingTab {
 
 		const syncBtn = syncCol.createEl("button", { text: "Sync now", cls: "mod-cta ical-sync-button" });
 		syncBtn.onClickEvent(() => {
-			void (async () => {
+			this.runAsync(async () => {
 				syncBtn.disabled = true;
-				syncBtn.setText("Syncing...");
+				syncBtn.setText("Syncing now...");
 				try {
 					await this.plugin.saveCalendar();
-					new Notice("iCal Pro: Sync successful!");
+					new Notice("Sync successful.");
 				} catch {
-					new Notice(`iCal Pro: Sync failed. ${this.plugin.lastSyncMessage}`);
+					new Notice(`iCal Pro: sync failed. ${this.plugin.lastSyncMessage}`);
 				} finally {
 					this.display();
 				}
-			})();
+			});
 		});
 		const diagnosticsBtn = syncCol.createEl("button", { text: "Copy diagnostics", cls: "ical-sync-button" });
 		diagnosticsBtn.onClickEvent(() => {
 			void navigator.clipboard.writeText(this.plugin.getDiagnosticsBundle());
-			new Notice("iCal Pro: Diagnostics copied.");
+			new Notice("Diagnostics copied.");
 		});
 	}
 
@@ -170,7 +190,7 @@ export class SettingsTab extends PluginSettingTab {
 			.setDesc("Add another path/category rule.")
 			.addButton((button) =>
 				button.setButtonText("Add path").onClick(() => {
-					void (async () => {
+					this.runAsync(async () => {
 						await this.plugin.updateSettings(
 							{
 								sourceRules: [...this.plugin.settings.sourceRules, { path: "/", category: "" }],
@@ -178,7 +198,7 @@ export class SettingsTab extends PluginSettingTab {
 							{ rebuildIndex: true },
 						);
 						this.display();
-					})();
+					});
 				}),
 			);
 	}
@@ -187,14 +207,14 @@ export class SettingsTab extends PluginSettingTab {
 		this.addHeader(containerEl, "calendar-days", "Scheduling and alarms");
 
 		new Setting(containerEl)
-			.setName("Time-block logic (Day planner)")
+			.setName("Time-block logic (day planner)")
 			.setDesc("If enabled, treats daily note headings as dates and task times as event start points.")
 			.addToggle((toggle) =>
-				toggle.setValue(this.plugin.settings.isDayPlannerPluginFormatEnabled).onChange(async (value) => {
-					await this.plugin.updateSettings(
+				toggle.setValue(this.plugin.settings.isDayPlannerPluginFormatEnabled).onChange((value) => {
+					this.runAsync(() => this.plugin.updateSettings(
 						{ isDayPlannerPluginFormatEnabled: value },
 						{ rebuildIndex: true },
-					);
+					));
 				}),
 			);
 
@@ -202,9 +222,13 @@ export class SettingsTab extends PluginSettingTab {
 			.setName("Sync strategy")
 			.setDesc("Define how dated tasks are mapped. Events are time-boxed; to-dos are status-tracked.")
 			.addDropdown((dropdown) => {
-				Object.entries(INCLUDE_EVENTS_OR_TODOS).forEach(([value, label]) => dropdown.addOption(value, label));
-				dropdown.setValue(this.plugin.settings.includeEventsOrTodos).onChange(async (value) => {
-					await this.plugin.updateSettings({ includeEventsOrTodos: value as typeof this.plugin.settings.includeEventsOrTodos });
+				Object.entries(INCLUDE_EVENTS_OR_TODOS).forEach(([value, label]) => {
+					dropdown.addOption(value, label);
+				});
+				dropdown.setValue(this.plugin.settings.includeEventsOrTodos).onChange((value) => {
+					if (isCalendarEntryMode(value)) {
+						void this.plugin.updateSettings({ includeEventsOrTodos: value });
+					}
 				});
 			});
 
@@ -212,18 +236,22 @@ export class SettingsTab extends PluginSettingTab {
 			.setName("Multiple date handling")
 			.setDesc("How to handle tasks that contain multiple start, scheduled, or due dates.")
 			.addDropdown((dropdown) => {
-				Object.entries(HOW_TO_PROCESS_MULTIPLE_DATES).forEach(([value, label]) => dropdown.addOption(value, label));
-				dropdown.setValue(this.plugin.settings.howToProcessMultipleDates).onChange(async (value) => {
-					await this.plugin.updateSettings({ howToProcessMultipleDates: value as typeof this.plugin.settings.howToProcessMultipleDates });
+				Object.entries(HOW_TO_PROCESS_MULTIPLE_DATES).forEach(([value, label]) => {
+					dropdown.addOption(value, label);
+				});
+				dropdown.setValue(this.plugin.settings.howToProcessMultipleDates).onChange((value) => {
+					if (isMultipleDateMode(value)) {
+						void this.plugin.updateSettings({ howToProcessMultipleDates: value });
+					}
 				});
 			});
 
 		new Setting(containerEl)
-			.setName("Enable native notifications (VALARM)")
-			.setDesc("Include alerts in your calendar app. Use the ⏰ emoji (e.g., - [ ] Task ⏰ 15) to set custom offsets in minutes.")
+			.setName("Enable native notifications")
+			.setDesc("Include alerts in your calendar app. Use the alarm emoji with a minute offset to set a custom reminder.")
 			.addToggle((toggle) =>
-				toggle.setValue(this.plugin.settings.enableAlarms).onChange(async (value) => {
-					await this.plugin.updateSettings({ enableAlarms: value });
+				toggle.setValue(this.plugin.settings.enableAlarms).onChange((value) => {
+					this.runAsync(() => this.plugin.updateSettings({ enableAlarms: value }));
 				}),
 			)
 			.addSlider((slider) =>
@@ -231,8 +259,8 @@ export class SettingsTab extends PluginSettingTab {
 					.setLimits(5, 180, 5)
 					.setDynamicTooltip()
 					.setValue(this.plugin.settings.defaultAlarmOffset)
-					.onChange(async (value) => {
-						await this.plugin.updateSettings({ defaultAlarmOffset: value });
+					.onChange((value) => {
+						this.runAsync(() => this.plugin.updateSettings({ defaultAlarmOffset: value }));
 					}),
 			);
 	}
@@ -244,8 +272,8 @@ export class SettingsTab extends PluginSettingTab {
 			.setName("Respect tasks global filter")
 			.setDesc("Require these tags for a checkbox to count as a real task.")
 			.addToggle((toggle) =>
-				toggle.setValue(this.plugin.settings.respectGlobalTaskFilter).onChange(async (value) => {
-					await this.plugin.updateSettings({ respectGlobalTaskFilter: value }, { rebuildIndex: true });
+				toggle.setValue(this.plugin.settings.respectGlobalTaskFilter).onChange((value) => {
+					this.runAsync(() => this.plugin.updateSettings({ respectGlobalTaskFilter: value }, { rebuildIndex: true }));
 				}),
 			)
 			.addText((text) =>
@@ -263,8 +291,8 @@ export class SettingsTab extends PluginSettingTab {
 			.setName("Category inclusion filter")
 			.setDesc("Only export tasks whose derived categories match these values (space separated).")
 			.addToggle((toggle) =>
-				toggle.setValue(this.plugin.settings.isIncludeCategoriesEnabled).onChange(async (value) => {
-					await this.plugin.updateSettings({ isIncludeCategoriesEnabled: value }, { rebuildIndex: true });
+				toggle.setValue(this.plugin.settings.isIncludeCategoriesEnabled).onChange((value) => {
+					this.runAsync(() => this.plugin.updateSettings({ isIncludeCategoriesEnabled: value }, { rebuildIndex: true }));
 				}),
 			)
 			.addText((text) =>
@@ -282,8 +310,8 @@ export class SettingsTab extends PluginSettingTab {
 			.setName("Category exclusion filter")
 			.setDesc("Hide tasks whose derived categories match these values.")
 			.addToggle((toggle) =>
-				toggle.setValue(this.plugin.settings.isExcludeCategoriesEnabled).onChange(async (value) => {
-					await this.plugin.updateSettings({ isExcludeCategoriesEnabled: value }, { rebuildIndex: true });
+				toggle.setValue(this.plugin.settings.isExcludeCategoriesEnabled).onChange((value) => {
+					this.runAsync(() => this.plugin.updateSettings({ isExcludeCategoriesEnabled: value }, { rebuildIndex: true }));
 				}),
 			)
 			.addText((text) =>
@@ -301,11 +329,11 @@ export class SettingsTab extends PluginSettingTab {
 			.setName("Tag inclusion filter")
 			.setDesc("Only sync tasks containing these tags (space separated).")
 			.addToggle((toggle) =>
-				toggle.setValue(this.plugin.settings.isIncludeTasksWithTags).onChange(async (value) => {
-					await this.plugin.updateSettings(
+				toggle.setValue(this.plugin.settings.isIncludeTasksWithTags).onChange((value) => {
+					this.runAsync(() => this.plugin.updateSettings(
 						{ isIncludeTasksWithTags: value },
 						{ rebuildIndex: true },
-					);
+					));
 				}),
 			)
 			.addText((text) =>
@@ -323,11 +351,11 @@ export class SettingsTab extends PluginSettingTab {
 			.setName("Tag exclusion filter")
 			.setDesc("Ignore tasks containing these tags.")
 			.addToggle((toggle) =>
-				toggle.setValue(this.plugin.settings.isExcludeTasksWithTags).onChange(async (value) => {
-					await this.plugin.updateSettings(
+				toggle.setValue(this.plugin.settings.isExcludeTasksWithTags).onChange((value) => {
+					this.runAsync(() => this.plugin.updateSettings(
 						{ isExcludeTasksWithTags: value },
 						{ rebuildIndex: true },
-					);
+					));
 				}),
 			)
 			.addText((text) =>
@@ -345,8 +373,8 @@ export class SettingsTab extends PluginSettingTab {
 			.setName("Ignore completed")
 			.setDesc("Do not sync tasks that are already marked as done.")
 			.addToggle((toggle) =>
-				toggle.setValue(this.plugin.settings.ignoreCompletedTasks).onChange(async (value) => {
-					await this.plugin.updateSettings({ ignoreCompletedTasks: value }, { rebuildIndex: true });
+				toggle.setValue(this.plugin.settings.ignoreCompletedTasks).onChange((value) => {
+					this.runAsync(() => this.plugin.updateSettings({ ignoreCompletedTasks: value }, { rebuildIndex: true }));
 				}),
 			);
 	}
@@ -356,9 +384,9 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Calendar filename")
-			.setDesc("Used for both local storage and GitHub Gist sync (e.g., obsidian.ics).")
+			.setDesc("Used for both local storage and hosted gist sync, for example calendar.ics.")
 			.addText((text) =>
-				text.setPlaceholder("obsidian.ics").setValue(this.plugin.settings.filename).onChange((value) => {
+				text.setPlaceholder("Calendar.ics").setValue(this.plugin.settings.filename).onChange((value) => {
 					this.scheduleUpdate("filename", async () => {
 						await this.plugin.updateSettings({ filename: value || "obsidian.ics" });
 						this.updateUrlDisplay();
@@ -370,8 +398,8 @@ export class SettingsTab extends PluginSettingTab {
 			.setName("Save to local file")
 			.setDesc("Export the .ics file to your vault. Ideal for iCloud or local-first workflows.")
 			.addToggle((toggle) =>
-				toggle.setValue(this.plugin.settings.isSaveToFileEnabled).onChange(async (value) => {
-					await this.plugin.updateSettings({ isSaveToFileEnabled: value });
+				toggle.setValue(this.plugin.settings.isSaveToFileEnabled).onChange((value) => {
+					this.runAsync(() => this.plugin.updateSettings({ isSaveToFileEnabled: value }));
 				}),
 			);
 
@@ -388,18 +416,20 @@ export class SettingsTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("Sync to GitHub Gist")
-			.setDesc("Push your calendar to a private Gist for public or multi-device subscription.")
+			.setName("Sync to hosted gist")
+			.setDesc("Publish your calendar to a private gist for subscriptions across devices.")
 			.addToggle((toggle) =>
-				toggle.setValue(this.plugin.settings.isSaveToGistEnabled).onChange(async (value) => {
-					await this.plugin.updateSettings({ isSaveToGistEnabled: value });
-					this.updateUrlDisplay();
+				toggle.setValue(this.plugin.settings.isSaveToGistEnabled).onChange((value) => {
+					this.runAsync(async () => {
+						await this.plugin.updateSettings({ isSaveToGistEnabled: value });
+						this.updateUrlDisplay();
+					});
 				}),
 			);
 
 		new Setting(containerEl)
 			.setName("GitHub username")
-			.setDesc("Used to build the raw subscription URL for your Gist export.")
+			.setDesc("Used to build the raw subscription link for your hosted gist.")
 			.addText((text) =>
 				text.setValue(this.plugin.settings.githubUsername).onChange((value) => {
 					this.scheduleUpdate("githubUsername", async () => {
@@ -411,7 +441,7 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Gist ID")
-			.setDesc("The unique ID at the end of your Gist URL, used as the sync target.")
+			.setDesc("Enter the identifier from the gist link used as the sync target.")
 			.addText((text) =>
 				text.setValue(this.plugin.settings.githubGistId).onChange((value) => {
 					this.scheduleUpdate("githubGistId", async () => {
@@ -423,9 +453,9 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Personal access token")
-			.setDesc("GitHub PAT with 'gist' scope.")
+			.setDesc("Personal access token with 'gist' scope.")
 			.addText((text) =>
-				text.setPlaceholder("ghp_...").setValue(this.plugin.settings.githubPersonalAccessToken).onChange((value) => {
+				text.setPlaceholder("Paste access token").setValue(this.plugin.settings.githubPersonalAccessToken).onChange((value) => {
 					this.scheduleUpdate("githubPersonalAccessToken", () =>
 						this.plugin.updateSettings({ githubPersonalAccessToken: value }),
 					);
@@ -433,18 +463,18 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Validate Gist connection")
-			.setDesc("Test whether the configured token and Gist ID are reachable.")
+			.setName("Validate gist access")
+			.setDesc("Check whether the configured token and identifier are reachable.")
 			.addButton((button) =>
 				button.setButtonText("Validate").onClick(() => {
-					void (async () => {
+					this.runAsync(async () => {
 						button.setDisabled(true);
-						button.setButtonText("Checking...");
+						button.setButtonText("Checking access...");
 						const result = await this.plugin.validateConnection();
 						new Notice(result.message);
 						button.setDisabled(false);
 						button.setButtonText("Validate");
-					})();
+					});
 				}),
 			);
 	}
@@ -454,24 +484,32 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Summary formatting")
-			.setDesc("Choose how [[Wiki links]] and [Markdown links] should be rendered in the calendar.")
+			.setDesc("Choose how note links should be rendered in the calendar.")
 			.addDropdown((dropdown) => {
-				Object.entries(HOW_TO_PARSE_INTERNAL_LINKS).forEach(([value, label]) => dropdown.addOption(value, label));
-				dropdown.setValue(this.plugin.settings.howToParseInternalLinks).onChange(async (value) => {
-					await this.plugin.updateSettings(
-						{ howToParseInternalLinks: value as typeof this.plugin.settings.howToParseInternalLinks },
-						{ rebuildIndex: true },
-					);
+				Object.entries(HOW_TO_PARSE_INTERNAL_LINKS).forEach(([value, label]) => {
+					dropdown.addOption(value, label);
+				});
+				dropdown.setValue(this.plugin.settings.howToParseInternalLinks).onChange((value) => {
+					if (isInternalLinkMode(value)) {
+						void this.plugin.updateSettings(
+							{ howToParseInternalLinks: value },
+							{ rebuildIndex: true },
+						);
+					}
 				});
 			});
 
 		new Setting(containerEl)
 			.setName("Obsidian link placement")
-			.setDesc("Where to place the 'obsidian://open' callback link in calendar entries.")
+			.setDesc("Where to place the app callback link in calendar entries.")
 			.addDropdown((dropdown) => {
-				Object.entries(LINK_PLACEMENT).forEach(([value, label]) => dropdown.addOption(value, label));
-				dropdown.setValue(this.plugin.settings.linkPlacement).onChange(async (value) => {
-					await this.plugin.updateSettings({ linkPlacement: value as typeof this.plugin.settings.linkPlacement });
+				Object.entries(LINK_PLACEMENT).forEach(([value, label]) => {
+					dropdown.addOption(value, label);
+				});
+				dropdown.setValue(this.plugin.settings.linkPlacement).onChange((value) => {
+					if (isLinkPlacement(value)) {
+						void this.plugin.updateSettings({ linkPlacement: value });
+					}
 				});
 			});
 
@@ -479,8 +517,8 @@ export class SettingsTab extends PluginSettingTab {
 			.setName("Auto-sync interval")
 			.setDesc("Frequency (in minutes) at which the calendar is regenerated and pushed.")
 			.addToggle((toggle) =>
-				toggle.setValue(this.plugin.settings.isPeriodicSaveEnabled).onChange(async (value) => {
-					await this.plugin.updateSettings({ isPeriodicSaveEnabled: value }, { rescheduleSync: true });
+				toggle.setValue(this.plugin.settings.isPeriodicSaveEnabled).onChange((value) => {
+					this.runAsync(() => this.plugin.updateSettings({ isPeriodicSaveEnabled: value }, { rescheduleSync: true }));
 				}),
 			)
 			.addSlider((slider) =>
@@ -488,8 +526,8 @@ export class SettingsTab extends PluginSettingTab {
 					.setLimits(5, 120, 5)
 					.setDynamicTooltip()
 					.setValue(this.plugin.settings.periodicSaveInterval)
-					.onChange(async (value) => {
-						await this.plugin.updateSettings({ periodicSaveInterval: value }, { rescheduleSync: true });
+					.onChange((value) => {
+						this.runAsync(() => this.plugin.updateSettings({ periodicSaveInterval: value }, { rescheduleSync: true }));
 					}),
 			);
 
@@ -498,8 +536,8 @@ export class SettingsTab extends PluginSettingTab {
 			.setName("Debug mode")
 			.setDesc("Enable verbose logging in the console (Ctrl+Shift+I).")
 			.addToggle((toggle) =>
-				toggle.setValue(this.plugin.settings.isDebug).onChange(async (value) => {
-					await this.plugin.updateSettings({ isDebug: value });
+				toggle.setValue(this.plugin.settings.isDebug).onChange((value) => {
+					this.runAsync(() => this.plugin.updateSettings({ isDebug: value }));
 				}),
 			);
 
@@ -535,11 +573,11 @@ export class SettingsTab extends PluginSettingTab {
 		if (this.plugin.settings.isSaveToGistEnabled && username && gistId) {
 			const url = `https://gist.githubusercontent.com/${username}/${gistId}/raw/${filename}`;
 			container.createEl("code", { text: url, cls: "ical-url-text" });
-			const copyBtn = container.createEl("button", { text: "Copy URL", cls: "mod-cta" });
+			const copyBtn = container.createEl("button", { text: "Copy link", cls: "mod-cta" });
 			copyBtn.onClickEvent(() => {
 				void navigator.clipboard.writeText(url);
-				copyBtn.setText("Copied!");
-				window.setTimeout(() => copyBtn.setText("Copy URL"), 2000);
+				copyBtn.setText("Copied.");
+				window.setTimeout(() => copyBtn.setText("Copy link"), 2000);
 			});
 			return;
 		}
@@ -550,7 +588,7 @@ export class SettingsTab extends PluginSettingTab {
 			return;
 		}
 
-		container.createEl("p", { text: "No active calendar destination. Enable GitHub Gist sync or local file export.", cls: "ical-url-placeholder" });
+		container.createEl("p", { text: "No active calendar destination. Enable hosted gist sync or local file export.", cls: "ical-url-placeholder" });
 	}
 
 	private scheduleUpdate(key: string, task: () => Promise<void>, delay = 250): void {
@@ -565,6 +603,10 @@ export class SettingsTab extends PluginSettingTab {
 		}, delay);
 
 		this.pendingUpdates.set(key, timeoutId);
+	}
+
+	private runAsync(task: () => Promise<void>): void {
+		void task();
 	}
 
 	private renderSourceRuleSetting(containerEl: HTMLElement, rule: TaskSourceRule, index: number): void {
@@ -593,7 +635,7 @@ export class SettingsTab extends PluginSettingTab {
 					.setIcon("trash")
 					.setTooltip("Remove path rule")
 					.onClick(() => {
-						void (async () => {
+						this.runAsync(async () => {
 							const sourceRules = this.plugin.settings.sourceRules.filter((_, ruleIndex) => ruleIndex !== index);
 							await this.plugin.updateSettings(
 								{
@@ -602,7 +644,7 @@ export class SettingsTab extends PluginSettingTab {
 								{ rebuildIndex: true },
 							);
 							this.display();
-						})();
+						});
 					}),
 			);
 	}

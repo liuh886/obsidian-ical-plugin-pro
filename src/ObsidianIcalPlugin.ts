@@ -66,17 +66,19 @@ export default class ObsidianIcalPlugin extends Plugin {
 		this.registerCommands();
 
 		// Postpone heavy operations until Obsidian is fully loaded
-		this.app.workspace.onLayoutReady(async () => {
-			await this.rebuildIndex();
-			
-			this.syncIntervalId = this.syncAutomationService.configurePeriodicSync(
-				this.settings,
-				() => this.saveCalendar(),
-				(intervalId) => this.registerInterval(intervalId),
-				this.syncIntervalId,
-			);
-			
-			void this.syncAutomationService.runStartupSyncIfReady(this.settings, () => this.saveCalendar());
+		this.app.workspace.onLayoutReady(() => {
+			this.runAsync(async () => {
+				await this.rebuildIndex();
+
+				this.syncIntervalId = this.syncAutomationService.configurePeriodicSync(
+					this.settings,
+					() => this.saveCalendar(),
+					(intervalId) => this.registerInterval(intervalId),
+					this.syncIntervalId,
+				);
+
+				await this.syncAutomationService.runStartupSyncIfReady(this.settings, () => this.saveCalendar());
+			});
 		});
 	}
 
@@ -163,7 +165,7 @@ export default class ObsidianIcalPlugin extends Plugin {
 				});
 			} else {
 				this.lastSyncStatus = "Failed";
-			this.lastSyncMessage = this.getErrorMessage(error);
+				this.lastSyncMessage = this.getErrorMessage(error);
 				this.recordSyncHistory({
 					status: "failed",
 					timestamp: timestamp.toISOString(),
@@ -171,7 +173,7 @@ export default class ObsidianIcalPlugin extends Plugin {
 					destinationResults: [],
 				});
 			}
-			console.error("iCal Pro: Sync error details:", error);
+			console.error(`iCal Pro: sync error details: ${this.getErrorMessage(error)}`);
 			throw error;
 		} finally {
 			await this.saveSettings();
@@ -212,8 +214,8 @@ export default class ObsidianIcalPlugin extends Plugin {
 	}
 
 	private registerUi(): void {
-		this.addRibbonIcon("calendar-with-checkmark", "iCal Pro: Sync now", async () => {
-			await this.runSyncWithNotice("iCal Pro: Starting synchronization...", "iCal Pro: Sync completed successfully!");
+		this.addRibbonIcon("calendar-with-checkmark", "Sync now", () => {
+			this.runAsync(() => this.runSyncWithNotice("Starting sync...", "Sync completed."));
 		});
 
 		this.addSettingTab(new SettingsTab(this.app, this));
@@ -223,14 +225,14 @@ export default class ObsidianIcalPlugin extends Plugin {
 		this.addCommand({
 			id: "save-calendar",
 			name: "Save and sync calendar",
-			callback: async () => {
-				await this.runSyncWithNotice("iCal Pro: Syncing...", "iCal Pro: Sync done.");
+			callback: () => {
+				this.runAsync(() => this.runSyncWithNotice("iCal Pro: syncing...", "iCal Pro: sync done."));
 			},
 		});
 
 		this.addCommand({
 			id: "open-gist-url",
-			name: "Open Gist URL in browser",
+			name: "Open link in browser",
 			callback: () => {
 				const { githubUsername, githubGistId } = this.settings;
 				if (!githubUsername || !githubGistId) {
@@ -249,8 +251,12 @@ export default class ObsidianIcalPlugin extends Plugin {
 			await this.saveCalendar();
 			new Notice(successMessage);
 		} catch {
-			new Notice(`iCal Pro: Sync failed. ${this.lastSyncMessage}`);
+			new Notice(`iCal Pro: sync failed. ${this.lastSyncMessage}`);
 		}
+	}
+
+	private runAsync(task: () => Promise<void>): void {
+		void task();
 	}
 
 	private async loadSettings(): Promise<void> {
@@ -282,6 +288,17 @@ export default class ObsidianIcalPlugin extends Plugin {
 			}
 		}
 
-		return String(error);
+		if (
+			typeof error === "string"
+			|| typeof error === "number"
+			|| typeof error === "boolean"
+			|| typeof error === "bigint"
+			|| typeof error === "symbol"
+			|| typeof error === "undefined"
+		) {
+			return String(error);
+		}
+
+		return "Unknown error";
 	}
 }
