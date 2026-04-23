@@ -109,22 +109,108 @@ var CalendarSyncService = class {
   }
 };
 
+// src/Application/DestinationHealthService.ts
+var DestinationHealthService = class {
+  evaluate(settings) {
+    const destinations = [
+      this.getLocalFileStatus(settings),
+      this.getGithubGistStatus(settings)
+    ];
+    const activeDestinations = destinations.filter((destination) => destination.enabled).map((destination) => destination.name);
+    const issues = destinations.flatMap((destination) => destination.issues);
+    if (activeDestinations.length === 0) {
+      issues.push("No active calendar destination. Enable local file export or GitHub Gist sync.");
+    }
+    return {
+      ready: issues.length === 0,
+      activeDestinations,
+      issues,
+      recommendedNextStep: this.getRecommendedNextStep(destinations),
+      destinations
+    };
+  }
+  getLocalFileStatus(settings) {
+    var _a;
+    const normalizedPath = ((_a = settings.savePath) == null ? void 0 : _a.trim()) || "/";
+    const enabled = settings.isSaveToFileEnabled;
+    const issues = enabled && !normalizedPath ? ["Local file export is enabled but no save path is configured."] : [];
+    return {
+      name: "local-file",
+      enabled,
+      ready: enabled && issues.length === 0,
+      issues,
+      metadata: {
+        configuredPath: normalizedPath
+      }
+    };
+  }
+  getGithubGistStatus(settings) {
+    var _a, _b, _c;
+    const enabled = settings.isSaveToGistEnabled;
+    const username = ((_a = settings.githubUsername) == null ? void 0 : _a.trim()) || "";
+    const gistId = ((_b = settings.githubGistId) == null ? void 0 : _b.trim()) || "";
+    const hasToken = Boolean((_c = settings.githubPersonalAccessToken) == null ? void 0 : _c.trim());
+    const issues = [];
+    if (enabled && !username) {
+      issues.push("GitHub Gist sync is enabled but username is missing.");
+    }
+    if (enabled && !gistId) {
+      issues.push("GitHub Gist sync is enabled but Gist ID is missing.");
+    }
+    if (enabled && !hasToken) {
+      issues.push("GitHub Gist sync is enabled but personal access token is missing.");
+    }
+    return {
+      name: "github-gist",
+      enabled,
+      ready: enabled && issues.length === 0,
+      issues,
+      metadata: {
+        hasUsername: Boolean(username),
+        hasGistId: Boolean(gistId),
+        hasToken,
+        username,
+        gistId
+      }
+    };
+  }
+  getRecommendedNextStep(destinations) {
+    const localFile = destinations.find((destination) => destination.name === "local-file");
+    const githubGist = destinations.find((destination) => destination.name === "github-gist");
+    if (!destinations.some((destination) => destination.enabled)) {
+      return "Enable 'Save to local file' or 'Sync to hosted gist' before running sync.";
+    }
+    if ((localFile == null ? void 0 : localFile.enabled) && !localFile.ready) {
+      return "Set a vault storage path for local file export.";
+    }
+    if ((githubGist == null ? void 0 : githubGist.enabled) && !githubGist.ready) {
+      return "Complete the GitHub username, Gist ID, and personal access token fields, then validate access.";
+    }
+    return "No destination issues detected.";
+  }
+};
+
 // src/Application/ConnectionValidationService.ts
 var ConnectionValidationService = class {
   constructor(requestFn) {
     __publicField(this, "requestFn", requestFn);
+    __publicField(this, "destinationHealthService", new DestinationHealthService());
   }
   async validateGist(settings) {
-    const { githubPersonalAccessToken, githubGistId } = settings;
-    if (!githubPersonalAccessToken || !githubGistId) {
-      return { success: false, message: "Token or Gist ID missing." };
+    var _a;
+    const gistStatus = this.destinationHealthService.evaluate(settings).destinations.find((destination) => destination.name === "github-gist");
+    if (!(gistStatus == null ? void 0 : gistStatus.enabled)) {
+      return { success: false, message: "GitHub Gist sync is not enabled." };
+    }
+    if (!gistStatus.ready) {
+      return { success: false, message: (_a = gistStatus.issues[0]) != null ? _a : "GitHub Gist settings are incomplete." };
     }
     try {
       const response = await this.requestFn({
-        url: `https://api.github.com/gists/${githubGistId}`,
+        url: `https://api.github.com/gists/${settings.githubGistId}`,
         method: "GET",
         headers: {
-          Authorization: `Bearer ${githubPersonalAccessToken}`,
+          Authorization: `Bearer ${settings.githubPersonalAccessToken}`,
           Accept: "application/vnd.github.v3+json"
         }
       });
@@ -140,11 +226,15 @@ var ConnectionValidationService = class {
 
 // src/Application/DiagnosticsService.ts
 var DiagnosticsService = class {
+  constructor() {
+    __publicField(this, "destinationHealthService", new DestinationHealthService());
+  }
   build(input) {
     const payload = {
       generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
       settings: this.redactSettings(input.settings),
       readiness: input.readiness,
+      destinationChecks: this.destinationHealthService.evaluate(input.settings),
       preview: input.preview,
       recentSyncResults: input.recentSyncResults
     };
@@ -188,7 +278,7 @@ var DEFAULT_SETTINGS = {
   isPeriodicSaveEnabled: true,
   periodicSaveInterval: 5,
   isSaveToGistEnabled: false,
-  isSaveToFileEnabled: false,
+  isSaveToFileEnabled: true,
   savePath: "/",
   howToParseInternalLinks: "DoNotModifyThem",
   ignoreCompletedTasks: false,
@@ -322,34 +412,15 @@ var SyncAutomationService = class {
 
 // src/Application/SyncReadinessService.ts
 var SyncReadinessService = class {
+  constructor() {
+    __publicField(this, "destinationHealthService", new DestinationHealthService());
+  }
   evaluate(settings) {
-    const activeDestinations = [];
-    const issues = [];
-    if (settings.isSaveToFileEnabled) {
-      activeDestinations.push("local-file");
-      if (!settings.savePath) {
-        issues.push("Local file export is enabled but no save path is configured.");
-      }
-    }
-    if (settings.isSaveToGistEnabled) {
-      activeDestinations.push("github-gist");
-      if (!settings.githubUsername) {
-        issues.push("GitHub Gist sync is enabled but username is missing.");
-      }
-      if (!settings.githubGistId) {
-        issues.push("GitHub Gist sync is enabled but Gist ID is missing.");
-      }
-      if (!settings.githubPersonalAccessToken) {
-        issues.push("GitHub Gist sync is enabled but personal access token is missing.");
-      }
-    }
-    if (activeDestinations.length === 0) {
-      issues.push("No active calendar destination. Enable local file export or GitHub Gist sync.");
-    }
+    const report = this.destinationHealthService.evaluate(settings);
     return {
-      ready: issues.length === 0,
-      activeDestinations,
-      issues
+      ready: report.ready,
+      activeDestinations: report.activeDestinations,
+      issues: report.issues
     };
   }
 };
@@ -1996,7 +2067,11 @@ var SettingsTab = class extends import_obsidian4.PluginSettingTab {
         });
       })
     );
-    new import_obsidian4.Setting(containerEl).setName("Gist ID").setDesc("Enter the identifier from the gist link used as the sync target.").addText(
+    new import_obsidian4.Setting(containerEl).setName("Gist ID").setDesc(this.createDescriptionWithLink(
+      "Enter the identifier from the gist link used as the sync target. ",
+      "Open Gist",
+      "https://gist.github.com/"
+    )).addText(
       (text) => text.setValue(this.plugin.settings.githubGistId).onChange((value) => {
         this.scheduleUpdate("githubGistId", async () => {
           await this.plugin.updateSettings({ githubGistId: value });
@@ -2004,7 +2079,11 @@ var SettingsTab = class extends import_obsidian4.PluginSettingTab {
         });
       })
     );
-    new import_obsidian4.Setting(containerEl).setName("Personal access token").setDesc("Personal access token with 'gist' scope.").addText(
+    new import_obsidian4.Setting(containerEl).setName("Personal access token").setDesc(this.createDescriptionWithLink(
+      "Personal access token with 'gist' scope. ",
+      "Create token",
+      "https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token"
+    )).addText(
       (text) => text.setPlaceholder("Paste access token").setValue(this.plugin.settings.githubPersonalAccessToken).onChange((value) => {
         this.scheduleUpdate(
           "githubPersonalAccessToken",
@@ -2118,6 +2197,17 @@ var SettingsTab = class extends import_obsidian4.PluginSettingTab {
   runAsync(task) {
     void task();
   }
+  createDescriptionWithLink(prefix, linkText, href) {
+    const fragment = document.createDocumentFragment();
+    fragment.append(prefix);
+    const link = document.createElement("a");
+    link.href = href;
+    link.textContent = linkText;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    fragment.append(link);
+    return fragment;
+  }
   renderSourceRuleSetting(containerEl, rule, index) {
     new import_obsidian4.Setting(containerEl).setName(`Source path ${index + 1}`).setDesc("Tasks in this path inherit the configured category.").addText((text) => {
       new FolderSuggest(this.app, text.inputEl);
@@ -2170,6 +2260,7 @@ var ObsidianIcalPlugin = class extends import_obsidian5.Plugin {
     __publicField(this, "lastSyncTime", "-");
     __publicField(this, "lastSyncMessage", "");
     __publicField(this, "syncHistory", []);
+    __publicField(this, "pendingFileUpdates", /* @__PURE__ */ new Map());
     __publicField(this, "settingsStore", new PluginSettingsStore(this));
     __publicField(this, "syncReadinessService", new SyncReadinessService());
     __publicField(this, "connectionValidationService", new ConnectionValidationService(import_obsidian5.requestUrl));
@@ -2183,6 +2274,8 @@ var ObsidianIcalPlugin = class extends import_obsidian5.Plugin {
     __publicField(this, "taskIndexService");
     __publicField(this, "syncService");
     __publicField(this, "syncIntervalId", null);
+    __publicField(this, "fileUpdateFlushId", null);
+    __publicField(this, "settingsSaveId", null);
   }
   async onload() {
     await this.loadSettings();
@@ -2240,23 +2333,27 @@ var ObsidianIcalPlugin = class extends import_obsidian5.Plugin {
   }
   async updateFileInIndex(file) {
     if (!(file instanceof import_obsidian5.TFile)) return;
-    await this.taskIndexService.indexFile(file, this.settings);
-    await this.saveSettings();
+    this.pendingFileUpdates.set(file.path, file);
+    this.schedulePendingFileIndexFlush();
   }
   removeFileFromIndex(file) {
     if (file instanceof import_obsidian5.TFile) {
+      this.pendingFileUpdates.delete(file.path);
       this.taskIndexService.removeFile(file.path);
-      void this.saveSettings();
+      this.scheduleSettingsSave();
     }
   }
   async renameFileInIndex(file, oldPath) {
     if (!(file instanceof import_obsidian5.TFile)) return;
+    this.pendingFileUpdates.delete(oldPath);
+    this.pendingFileUpdates.delete(file.path);
     await this.taskIndexService.renameFile(file, oldPath, this.settings);
-    await this.saveSettings();
+    this.scheduleSettingsSave();
   }
   async saveCalendar() {
     const timestamp = /* @__PURE__ */ new Date();
     try {
+      await this.flushPendingFileUpdates();
       const readiness = this.syncReadinessService.evaluate(this.settings);
       if (!readiness.ready) {
         throw new Error(readiness.issues.join(" "));
@@ -2369,6 +2466,39 @@ var ObsidianIcalPlugin = class extends import_obsidian5.Plugin {
   }
   runAsync(task) {
     void task();
+  }
+  schedulePendingFileIndexFlush(delay = 250) {
+    if (this.fileUpdateFlushId !== null) {
+      window.clearTimeout(this.fileUpdateFlushId);
+    }
+    this.fileUpdateFlushId = window.setTimeout(() => {
+      this.fileUpdateFlushId = null;
+      this.runAsync(() => this.flushPendingFileUpdates());
+    }, delay);
+  }
+  async flushPendingFileUpdates() {
+    if (this.fileUpdateFlushId !== null) {
+      window.clearTimeout(this.fileUpdateFlushId);
+      this.fileUpdateFlushId = null;
+    }
+    if (this.pendingFileUpdates.size === 0) {
+      return;
+    }
+    const files = [...this.pendingFileUpdates.values()];
+    this.pendingFileUpdates.clear();
+    for (const file of files) {
+      await this.taskIndexService.indexFile(file, this.settings);
+    }
+    await this.saveSettings();
+  }
+  scheduleSettingsSave(delay = 100) {
+    if (this.settingsSaveId !== null) {
+      window.clearTimeout(this.settingsSaveId);
+    }
+    this.settingsSaveId = window.setTimeout(() => {
+      this.settingsSaveId = null;
+      this.runAsync(() => this.saveSettings());
+    }, delay);
   }
   async loadSettings() {
     const raw = await this.settingsStore.load();

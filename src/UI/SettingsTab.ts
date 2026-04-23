@@ -441,7 +441,11 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Gist ID")
-			.setDesc("Enter the identifier from the gist link used as the sync target.")
+			.setDesc(this.createDescriptionWithLink(
+				"Enter the identifier from the gist link used as the sync target. ",
+				"Open Gist",
+				"https://gist.github.com/",
+			))
 			.addText((text) =>
 				text.setValue(this.plugin.settings.githubGistId).onChange((value) => {
 					this.scheduleUpdate("githubGistId", async () => {
@@ -453,7 +457,11 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Personal access token")
-			.setDesc("Personal access token with 'gist' scope.")
+			.setDesc(this.createDescriptionWithLink(
+				"Personal access token with 'gist' scope. ",
+				"Create token",
+				"https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token",
+			))
 			.addText((text) =>
 				text.setPlaceholder("Paste access token").setValue(this.plugin.settings.githubPersonalAccessToken).onChange((value) => {
 					this.scheduleUpdate("githubPersonalAccessToken", () =>
@@ -607,6 +615,20 @@ export class SettingsTab extends PluginSettingTab {
 
 	private runAsync(task: () => Promise<void>): void {
 		void task();
+	}
+
+	private createDescriptionWithLink(prefix: string, linkText: string, href: string): DocumentFragment {
+		const fragment = document.createDocumentFragment();
+		fragment.append(prefix);
+
+		const link = document.createElement("a");
+		link.href = href;
+		link.textContent = linkText;
+		link.target = "_blank";
+		link.rel = "noopener noreferrer";
+		fragment.append(link);
+
+		return fragment;
 	}
 
 	private renderSourceRuleSetting(containerEl: HTMLElement, rule: TaskSourceRule, index: number): void {

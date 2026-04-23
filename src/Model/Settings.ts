@@ -77,7 +77,7 @@ export const DEFAULT_SETTINGS: Settings = {
 	isPeriodicSaveEnabled: true,
 	periodicSaveInterval: 5,
 	isSaveToGistEnabled: false,
-	isSaveToFileEnabled: false,
+	isSaveToFileEnabled: true,
 	savePath: "/",
 	howToParseInternalLinks: "DoNotModifyThem",
 	ignoreCompletedTasks: false,

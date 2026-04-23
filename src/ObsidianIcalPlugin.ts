@@ -29,6 +29,7 @@ export default class ObsidianIcalPlugin extends Plugin {
 	lastSyncTime = "-";
 	lastSyncMessage = "";
 	syncHistory: SyncHistoryEntry[] = [];
+	private readonly pendingFileUpdates = new Map<string, TFile>();
 
 	private readonly settingsStore = new PluginSettingsStore(this);
 	private readonly syncReadinessService = new SyncReadinessService();
@@ -43,6 +44,8 @@ export default class ObsidianIcalPlugin extends Plugin {
 	private taskIndexService!: TaskIndexingService;
 	private syncService!: CalendarSyncService;
 	private syncIntervalId: number | null = null;
+	private fileUpdateFlushId: number | null = null;
+	private settingsSaveId: number | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -110,26 +113,30 @@ export default class ObsidianIcalPlugin extends Plugin {
 
 	public async updateFileInIndex(file: TAbstractFile): Promise<void> {
 		if (!(file instanceof TFile)) return;
-		await this.taskIndexService.indexFile(file, this.settings);
-		await this.saveSettings();
+		this.pendingFileUpdates.set(file.path, file);
+		this.schedulePendingFileIndexFlush();
 	}
 
 	public removeFileFromIndex(file: TAbstractFile): void {
 		if (file instanceof TFile) {
+			this.pendingFileUpdates.delete(file.path);
 			this.taskIndexService.removeFile(file.path);
-			void this.saveSettings();
+			this.scheduleSettingsSave();
 		}
 	}
 
 	public async renameFileInIndex(file: TAbstractFile, oldPath: string): Promise<void> {
 		if (!(file instanceof TFile)) return;
+		this.pendingFileUpdates.delete(oldPath);
+		this.pendingFileUpdates.delete(file.path);
 		await this.taskIndexService.renameFile(file, oldPath, this.settings);
-		await this.saveSettings();
+		this.scheduleSettingsSave();
 	}
 
 	public async saveCalendar(): Promise<void> {
 		const timestamp = new Date();
 		try {
+			await this.flushPendingFileUpdates();
 			const readiness = this.syncReadinessService.evaluate(this.settings);
 			if (!readiness.ready) {
 				throw new Error(readiness.issues.join(" "));
@@ -257,6 +264,48 @@ export default class ObsidianIcalPlugin extends Plugin {
 
 	private runAsync(task: () => Promise<void>): void {
 		void task();
+	}
+
+	private schedulePendingFileIndexFlush(delay = 250): void {
+		if (this.fileUpdateFlushId !== null) {
+			window.clearTimeout(this.fileUpdateFlushId);
+		}
+
+		this.fileUpdateFlushId = window.setTimeout(() => {
+			this.fileUpdateFlushId = null;
+			this.runAsync(() => this.flushPendingFileUpdates());
+		}, delay);
+	}
+
+	private async flushPendingFileUpdates(): Promise<void> {
+		if (this.fileUpdateFlushId !== null) {
+			window.clearTimeout(this.fileUpdateFlushId);
+			this.fileUpdateFlushId = null;
+		}
+
+		if (this.pendingFileUpdates.size === 0) {
+			return;
+		}
+
+		const files = [...this.pendingFileUpdates.values()];
+		this.pendingFileUpdates.clear();
+
+		for (const file of files) {
+			await this.taskIndexService.indexFile(file, this.settings);
+		}
+
+		await this.saveSettings();
+	}
+
+	private scheduleSettingsSave(delay = 100): void {
+		if (this.settingsSaveId !== null) {
+			window.clearTimeout(this.settingsSaveId);
+		}
+
+		this.settingsSaveId = window.setTimeout(() => {
+			this.settingsSaveId = null;
+			this.runAsync(() => this.saveSettings());
+		}, delay);
 	}
 
 	private async loadSettings(): Promise<void> {
