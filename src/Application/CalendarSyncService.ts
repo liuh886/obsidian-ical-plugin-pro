@@ -5,6 +5,7 @@ import { CalendarDestination } from "../Infrastructure/CalendarDestination";
 import { SyncExecutionError } from "./SyncExecutionError";
 import { SyncPreview, SyncPreviewService } from "./SyncPreviewService";
 import { TaskIndexStats } from "./TaskIndexingService";
+import { ErrorHelper } from "../Service/ErrorHelper";
 
 export interface DestinationSyncResult {
 	name: string;
@@ -54,7 +55,7 @@ export class CalendarSyncService {
 				destinationResults.push({
 					name: destination.name,
 					status: "failed",
-					message: error instanceof Error ? error.message : String(error),
+					message: ErrorHelper.get(error),
 				});
 			}
 		}

@@ -17,6 +17,7 @@ import { IcalService } from "./Service/IcalService";
 import { TaskFinder } from "./Service/TaskFinder";
 import { TaskIndex } from "./Service/TaskIndex";
 import { SettingsTab } from "./UI/SettingsTab";
+import { ErrorHelper } from "./Service/ErrorHelper";
 
 type UpdateSettingsOptions = {
 	rebuildIndex?: boolean;
@@ -143,51 +144,52 @@ export default class ObsidianIcalPlugin extends Plugin {
 			}
 
 			const result = await this.syncService.sync(
-				this.taskIndexService.getAllTasks(),
-				this.taskIndexService.getIndexStats(),
-				this.settings,
+			        this.taskIndexService.getAllTasks(),
+			        this.taskIndexService.getIndexStats(),
+			        this.settings,
 			);
 			this.lastSyncStatus = "Success";
 			this.lastSyncTime = timestamp.toLocaleTimeString();
 			this.lastSyncMessage = `Synced ${result.preview.exportedTaskCount} tasks to ${result.destinations.join(", ")}`;
 			this.recordSyncHistory({
-				status: "success",
-				timestamp: timestamp.toISOString(),
-				message: this.lastSyncMessage,
-				destinationResults: result.destinationResults,
+			        status: "success",
+			        timestamp: timestamp.toISOString(),
+			        message: this.lastSyncMessage,
+			        destinationResults: result.destinationResults,
 			});
-		} catch (error: unknown) {
+			} catch (error: unknown) {
 			this.lastSyncTime = timestamp.toLocaleTimeString();
 			if (error instanceof SyncExecutionError) {
-				const hasSuccess = error.result.destinationResults.some((entry) => entry.status === "success");
-				this.lastSyncStatus = hasSuccess ? "Partial" : "Failed";
-				this.lastSyncMessage = error.result.destinationResults
-					.map((entry) => `${entry.name}: ${entry.status}${entry.message ? ` (${entry.message})` : ""}`)
-					.join("; ");
-				this.recordSyncHistory({
-					status: hasSuccess ? "partial" : "failed",
-					timestamp: timestamp.toISOString(),
-					message: this.lastSyncMessage,
-					destinationResults: error.result.destinationResults,
-				});
+			        const hasSuccess = error.result.destinationResults.some((entry) => entry.status === "success");
+			        this.lastSyncStatus = hasSuccess ? "Partial" : "Failed";
+			        this.lastSyncMessage = error.result.destinationResults
+			                .map((entry) => `${entry.name}: ${entry.status}${entry.message ? ` (${entry.message})` : ""}`)
+			                .join("; ");
+			        this.recordSyncHistory({
+			                status: hasSuccess ? "partial" : "failed",
+			                timestamp: timestamp.toISOString(),
+			                message: this.lastSyncMessage,
+			                destinationResults: error.result.destinationResults,
+			        });
 			} else {
-				this.lastSyncStatus = "Failed";
-				this.lastSyncMessage = this.getErrorMessage(error);
-				this.recordSyncHistory({
-					status: "failed",
-					timestamp: timestamp.toISOString(),
-					message: this.lastSyncMessage,
-					destinationResults: [],
-				});
+			        this.lastSyncStatus = "Failed";
+			        this.lastSyncMessage = ErrorHelper.get(error);
+			        this.recordSyncHistory({
+			                status: "failed",
+			                timestamp: timestamp.toISOString(),
+			                message: this.lastSyncMessage,
+			                destinationResults: [],
+			        });
 			}
-			console.error(`iCal Pro: sync error details: ${this.getErrorMessage(error)}`);
+			console.error(`iCal Pro: sync error details: ${ErrorHelper.get(error)}`);
 			throw error;
-		} finally {
+			} finally {
 			await this.saveSettings();
-		}
-	}
+			}
+			}
 
-	public async validateConnection(): Promise<{ success: boolean; message: string }> {
+			public async validateConnection(): Promise<{ success: boolean; message: string }> {
+
 		return await this.connectionValidationService.validateGist(this.settings);
 	}
 
@@ -322,32 +324,5 @@ export default class ObsidianIcalPlugin extends Plugin {
 
 	private recordSyncHistory(entry: SyncHistoryEntry): void {
 		this.syncHistory = [entry, ...this.syncHistory].slice(0, 10);
-	}
-
-	private getErrorMessage(error: unknown): string {
-		if (error instanceof Error) {
-			return error.message;
-		}
-
-		if (typeof error === "object" && error !== null) {
-			try {
-				return JSON.stringify(error);
-			} catch {
-				return "Unknown error object";
-			}
-		}
-
-		if (
-			typeof error === "string"
-			|| typeof error === "number"
-			|| typeof error === "boolean"
-			|| typeof error === "bigint"
-			|| typeof error === "symbol"
-			|| typeof error === "undefined"
-		) {
-			return String(error);
-		}
-
-		return "Unknown error";
 	}
 }

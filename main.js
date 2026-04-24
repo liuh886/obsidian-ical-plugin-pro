@@ -61,6 +61,26 @@ var SyncPreviewService = class {
   }
 };
 
+// src/Service/ErrorHelper.ts
+var ErrorHelper = class {
+  static get(error) {
+    if (error instanceof Error) {
+      return error.message;
+    }
+    if (typeof error === "object" && error !== null) {
+      try {
+        return JSON.stringify(error);
+      } catch (e) {
+        return "Unknown error object";
+      }
+    }
+    if (typeof error === "string" || typeof error === "number" || typeof error === "boolean" || typeof error === "bigint" || typeof error === "symbol" || typeof error === "undefined") {
+      return String(error);
+    }
+    return "Unknown error";
+  }
+};
+
 // src/Application/CalendarSyncService.ts
 var CalendarSyncService = class {
   constructor(icalService, destinations) {
@@ -89,7 +109,7 @@ var CalendarSyncService = class {
         destinationResults.push({
           name: destination.name,
           status: "failed",
-          message: error instanceof Error ? error.message : String(error)
+          message: ErrorHelper.get(error)
         });
       }
     }
@@ -383,7 +403,7 @@ var SyncAutomationService = class {
     }
     const intervalId = window.setInterval(() => {
       void runSync().catch((error) => {
-        console.error(`iCal Pro: periodic sync failed: ${this.getErrorMessage(error)}`);
+        console.error(`iCal Pro: periodic sync failed: ${ErrorHelper.get(error)}`);
       });
     }, settings.periodicSaveInterval * 60 * 1e3);
     registerInterval(intervalId);
@@ -396,17 +416,8 @@ var SyncAutomationService = class {
     try {
       await runSync();
     } catch (error) {
-      console.error(`iCal Pro: startup sync failed: ${this.getErrorMessage(error)}`);
+      console.error(`iCal Pro: startup sync failed: ${ErrorHelper.get(error)}`);
     }
-  }
-  getErrorMessage(error) {
-    if (error instanceof Error) {
-      return error.message;
-    }
-    if (typeof error === "string" || typeof error === "number" || typeof error === "boolean" || typeof error === "bigint" || typeof error === "symbol" || typeof error === "undefined") {
-      return String(error);
-    }
-    return "Unknown error";
   }
 };
 
@@ -1945,7 +1956,7 @@ var SettingsTab = class extends import_obsidian4.PluginSettingTab {
         this.runAsync(() => this.plugin.updateSettings({ respectGlobalTaskFilter: value }, { rebuildIndex: true }));
       })
     ).addText(
-      (text) => text.setPlaceholder("#task").setValue(this.plugin.settings.globalTaskFilterTags).onChange((value) => {
+      (text) => text.setPlaceholder("#Task").setValue(this.plugin.settings.globalTaskFilterTags).onChange((value) => {
         this.scheduleUpdate(
           "globalTaskFilterTags",
           () => this.plugin.updateSettings(
@@ -1993,7 +2004,7 @@ var SettingsTab = class extends import_obsidian4.PluginSettingTab {
         ));
       })
     ).addText(
-      (text) => text.setPlaceholder("#work #sync").setValue(this.plugin.settings.includeTasksWithTags).onChange((value) => {
+      (text) => text.setPlaceholder("#Work #sync").setValue(this.plugin.settings.includeTasksWithTags).onChange((value) => {
         this.scheduleUpdate(
           "includeTasksWithTags",
           () => this.plugin.updateSettings(
@@ -2011,7 +2022,7 @@ var SettingsTab = class extends import_obsidian4.PluginSettingTab {
         ));
       })
     ).addText(
-      (text) => text.setPlaceholder("#private").setValue(this.plugin.settings.excludeTasksWithTags).onChange((value) => {
+      (text) => text.setPlaceholder("#Private").setValue(this.plugin.settings.excludeTasksWithTags).onChange((value) => {
         this.scheduleUpdate(
           "excludeTasksWithTags",
           () => this.plugin.updateSettings(
@@ -2331,7 +2342,7 @@ var ObsidianIcalPlugin = class extends import_obsidian5.Plugin {
     await this.taskIndexService.rebuild(this.settings);
     await this.saveSettings();
   }
-  async updateFileInIndex(file) {
+  updateFileInIndex(file) {
     if (!(file instanceof import_obsidian5.TFile)) return;
     this.pendingFileUpdates.set(file.path, file);
     this.schedulePendingFileIndexFlush();
@@ -2386,7 +2397,7 @@ var ObsidianIcalPlugin = class extends import_obsidian5.Plugin {
         });
       } else {
         this.lastSyncStatus = "Failed";
-        this.lastSyncMessage = this.getErrorMessage(error);
+        this.lastSyncMessage = ErrorHelper.get(error);
         this.recordSyncHistory({
           status: "failed",
           timestamp: timestamp.toISOString(),
@@ -2394,14 +2405,14 @@ var ObsidianIcalPlugin = class extends import_obsidian5.Plugin {
           destinationResults: []
         });
       }
-      console.error(`iCal Pro: sync error details: ${this.getErrorMessage(error)}`);
+      console.error(`iCal Pro: sync error details: ${ErrorHelper.get(error)}`);
       throw error;
     } finally {
       await this.saveSettings();
     }
   }
   async validateConnection() {
-    return this.connectionValidationService.validateGist(this.settings);
+    return await this.connectionValidationService.validateGist(this.settings);
   }
   getSyncReadiness() {
     return this.syncReadinessService.evaluate(this.settings);
@@ -2422,11 +2433,11 @@ var ObsidianIcalPlugin = class extends import_obsidian5.Plugin {
     });
   }
   registerVaultEvents() {
-    this.registerEvent(this.app.vault.on("modify", (file) => void this.updateFileInIndex(file)));
+    this.registerEvent(this.app.vault.on("modify", (file) => this.updateFileInIndex(file)));
     this.registerEvent(this.app.vault.on("delete", (file) => this.removeFileFromIndex(file)));
     this.registerEvent(this.app.vault.on("rename", (file, oldPath) => void this.renameFileInIndex(file, oldPath)));
-    this.registerEvent(this.app.vault.on("create", (file) => void this.updateFileInIndex(file)));
-    this.registerEvent(this.app.metadataCache.on("changed", (file) => void this.updateFileInIndex(file)));
+    this.registerEvent(this.app.vault.on("create", (file) => this.updateFileInIndex(file)));
+    this.registerEvent(this.app.metadataCache.on("changed", (file) => this.updateFileInIndex(file)));
   }
   registerUi() {
     this.addRibbonIcon("calendar-with-checkmark", "Sync now", () => {
@@ -2512,22 +2523,6 @@ var ObsidianIcalPlugin = class extends import_obsidian5.Plugin {
   }
   recordSyncHistory(entry) {
     this.syncHistory = [entry, ...this.syncHistory].slice(0, 10);
-  }
-  getErrorMessage(error) {
-    if (error instanceof Error) {
-      return error.message;
-    }
-    if (typeof error === "object" && error !== null) {
-      try {
-        return JSON.stringify(error);
-      } catch (e) {
-        return "Unknown error object";
-      }
-    }
-    if (typeof error === "string" || typeof error === "number" || typeof error === "boolean" || typeof error === "bigint" || typeof error === "symbol" || typeof error === "undefined") {
-      return String(error);
-    }
-    return "Unknown error";
   }
 };
 

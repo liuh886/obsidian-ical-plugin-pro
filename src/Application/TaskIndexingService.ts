@@ -164,7 +164,7 @@ export class TaskIndexingService {
 				position: { start: { line: index } },
 			}));
 
-		return headings.length > 0 ? new HeadingsHelper(headings as never[]) : null;
+		return headings.length > 0 ? new HeadingsHelper(headings) : null;
 	}
 
 	private getSourceRuleForFile(filePath: string, settings: Settings): TaskSourceRule | null {

@@ -1,10 +1,19 @@
 import { HeadingCache } from "obsidian";
 
+export interface HeadingReference {
+	heading: string;
+	position: {
+		start: {
+			line: number;
+		};
+	};
+}
+
 export class HeadingsHelper {
-	constructor(private readonly headings: HeadingCache[]) {}
+	constructor(private readonly headings: HeadingReference[]) {}
 
 	public resolveDateForLine(lineNumber: number): Date | null {
-		let closestHeading: HeadingCache | null = null;
+		let closestHeading: HeadingReference | null = null;
 
 		for (const heading of this.headings) {
 			if (heading.position.start.line < lineNumber) {
