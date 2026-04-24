@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.5] - 2026-04-24
+- Enabled TypeScript strict mode and fixed all type safety issues.
+- Added missing version field to `manifest.json`.
+- Refined UI text to adhere to strict sentence case (e.g., "Subscription url", "Gist id").
+- Updated `versions.json` and rebuilt the release bundle.
+
 ## [2.1.4] - 2026-04-08
 - Fixed the remaining review-bot issue in sync automation error handling.
 - Normalized the last settings description that still violated Obsidian UI sentence case checks.

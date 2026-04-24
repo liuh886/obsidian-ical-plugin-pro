@@ -95,7 +95,7 @@ export class SettingsTab extends PluginSettingTab {
 		const urlCol = statusGrid.createDiv({ cls: "ical-pro-status-col" });
 		const statusTitle = urlCol.createDiv({ cls: "ical-pro-card-title" });
 		setIcon(statusTitle, "link");
-		statusTitle.createSpan({ text: " Subscription URL" });
+		statusTitle.createSpan({ text: " Subscription url" });
 		const urlContainer = urlCol.createDiv({ cls: "ical-url-container" });
 		this.renderUrl(urlContainer);
 
@@ -440,7 +440,7 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Gist ID")
+			.setName("Gist id")
 			.setDesc(this.createDescriptionWithLink(
 				"Enter the identifier from the gist link used as the sync target. ",
 				"Open Gist",

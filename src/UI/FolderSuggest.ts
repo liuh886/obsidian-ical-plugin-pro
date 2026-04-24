@@ -1,7 +1,6 @@
 import { TFolder, AbstractInputSuggest, App, TAbstractFile } from "obsidian";
 
 export class FolderSuggest extends AbstractInputSuggest<TFolder> {
-    content: TFolder[];
     private readonly textInput: HTMLInputElement;
 
     constructor(app: App, textInputEl: HTMLInputElement) {
