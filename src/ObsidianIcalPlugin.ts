@@ -111,7 +111,7 @@ export default class ObsidianIcalPlugin extends Plugin {
 		await this.saveSettings();
 	}
 
-	public async updateFileInIndex(file: TAbstractFile): Promise<void> {
+	public updateFileInIndex(file: TAbstractFile): void {
 		if (!(file instanceof TFile)) return;
 		this.pendingFileUpdates.set(file.path, file);
 		this.schedulePendingFileIndexFlush();
@@ -188,7 +188,7 @@ export default class ObsidianIcalPlugin extends Plugin {
 	}
 
 	public async validateConnection(): Promise<{ success: boolean; message: string }> {
-		return this.connectionValidationService.validateGist(this.settings);
+		return await this.connectionValidationService.validateGist(this.settings);
 	}
 
 	public getSyncReadiness() {
@@ -213,11 +213,11 @@ export default class ObsidianIcalPlugin extends Plugin {
 	}
 
 	private registerVaultEvents(): void {
-		this.registerEvent(this.app.vault.on("modify", (file) => void this.updateFileInIndex(file)));
+		this.registerEvent(this.app.vault.on("modify", (file) => this.updateFileInIndex(file)));
 		this.registerEvent(this.app.vault.on("delete", (file) => this.removeFileFromIndex(file)));
 		this.registerEvent(this.app.vault.on("rename", (file, oldPath) => void this.renameFileInIndex(file, oldPath)));
-		this.registerEvent(this.app.vault.on("create", (file) => void this.updateFileInIndex(file)));
-		this.registerEvent(this.app.metadataCache.on("changed", (file) => void this.updateFileInIndex(file)));
+		this.registerEvent(this.app.vault.on("create", (file) => this.updateFileInIndex(file)));
+		this.registerEvent(this.app.metadataCache.on("changed", (file) => this.updateFileInIndex(file)));
 	}
 
 	private registerUi(): void {
