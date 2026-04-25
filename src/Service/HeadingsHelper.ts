@@ -1,4 +1,3 @@
-import { HeadingCache } from "obsidian";
 
 export interface HeadingReference {
 	heading: string;

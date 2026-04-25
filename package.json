@@ -1,14 +1,16 @@
 {
   "name": "ical-plugin-pro",
   "version": "2.1.5",
+  "type": "module",
   "description": "Sync tasks to Google, Apple, and Outlook calendars via a standards-compliant iCalendar (ICS) feed with smart date inheritance.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "node esbuild.config.mjs production",
     "typecheck": "node ./node_modules/typescript/bin/tsc -noEmit -skipLibCheck",
+    "lint": "eslint src/**/*.ts",
     "test:smoke": "node ./node_modules/tsx/dist/cli.mjs --test scripts/smoke-tests.ts",
-    "validate": "npm run typecheck && npm run test:smoke && npm run build"
+    "validate": "npm run typecheck && npm run lint && npm run test:smoke && npm run build"
   },
   "keywords": [
     "obsidian",
@@ -23,8 +25,9 @@
     "@typescript-eslint/parser": "^8.0.0",
     "builtin-modules": "^3.2.0",
     "esbuild": "^0.27.7",
-    "eslint": "^8.57.1",
+    "eslint": "^9.0.0",
     "eslint-plugin-obsidian": "^2.30.0",
+    "eslint-plugin-obsidianmd": "^0.2.4",
     "obsidian": "latest",
     "tslib": "2.3.1",
     "tsx": "^4.19.2",
