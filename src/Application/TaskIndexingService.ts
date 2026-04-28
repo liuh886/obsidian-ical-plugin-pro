@@ -16,6 +16,7 @@ export interface TaskIndexStats {
 
 const INDEX_REBUILD_SETTINGS: Array<keyof Settings> = [
 	"sourceRules",
+	"excludedPaths",
 	"isDayPlannerPluginFormatEnabled",
 	"respectGlobalTaskFilter",
 	"globalTaskFilterTags",
@@ -168,6 +169,10 @@ export class TaskIndexingService {
 	}
 
 	private getSourceRuleForFile(filePath: string, settings: Settings): TaskSourceRule | null {
+		if (settings.excludedPaths.some((excludedPath) => this.isFileWithinRootPath(filePath, excludedPath))) {
+			return null;
+		}
+
 		const rules = settings.sourceRules;
 		const matchingRules = rules.filter((rule) => this.isFileWithinRootPath(filePath, rule.path));
 		if (matchingRules.length === 0) {

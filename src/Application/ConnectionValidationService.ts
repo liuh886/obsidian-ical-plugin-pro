@@ -44,7 +44,7 @@ export class ConnectionValidationService {
 
 			return { success: false, message: `GitHub returned status ${response.status}` };
 		} catch {
-			return { success: false, message: "Network error or invalid Token/Gist ID." };
+			return { success: false, message: "Network error or invalid token/gist id." };
 		}
 	}
 }

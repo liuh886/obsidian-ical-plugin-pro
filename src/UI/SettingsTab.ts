@@ -201,6 +201,33 @@ export class SettingsTab extends PluginSettingTab {
 					});
 				}),
 			);
+
+		containerEl.createEl("p", {
+			text: "Specify folders or files to explicitly ignore. Tasks in these paths will never be indexed.",
+			cls: "setting-item-description",
+		});
+
+		const excludedContainer = containerEl.createDiv({ cls: "ical-pro-excluded-paths" });
+		this.plugin.settings.excludedPaths.forEach((path, index) => {
+			this.renderExcludedPathSetting(excludedContainer, path, index);
+		});
+
+		new Setting(containerEl)
+			.setName("Add excluded path")
+			.setDesc("Add another folder or file to ignore.")
+			.addButton((button) =>
+				button.setButtonText("Add exclusion").onClick(() => {
+					this.runAsync(async () => {
+						await this.plugin.updateSettings(
+							{
+								excludedPaths: [...this.plugin.settings.excludedPaths, "/"],
+							},
+							{ rebuildIndex: true },
+						);
+						this.display();
+					});
+				}),
+			);
 	}
 
 	private renderDateSettings(containerEl: HTMLElement): void {
@@ -669,6 +696,51 @@ export class SettingsTab extends PluginSettingTab {
 						});
 					}),
 			);
+	}
+
+	private renderExcludedPathSetting(containerEl: HTMLElement, path: string, index: number): void {
+		new Setting(containerEl)
+			.setName(`Excluded path ${index + 1}`)
+			.addText((text) => {
+				new FolderSuggest(this.app, text.inputEl);
+				text
+					.setPlaceholder("/")
+					.setValue(path)
+					.onChange((value) => {
+						this.scheduleExcludedPathUpdate(index, normalizePath(value) || "/");
+					});
+			})
+			.addExtraButton((button) =>
+				button
+					.setIcon("trash")
+					.setTooltip("Remove exclusion")
+					.onClick(() => {
+						this.runAsync(async () => {
+							const excludedPaths = this.plugin.settings.excludedPaths.filter((_, pathIndex) => pathIndex !== index);
+							await this.plugin.updateSettings(
+								{
+									excludedPaths,
+								},
+								{ rebuildIndex: true },
+							);
+							this.display();
+						});
+					}),
+			);
+	}
+
+	private scheduleExcludedPathUpdate(index: number, path: string): void {
+		this.scheduleUpdate(`excluded-path-${index}`, async () => {
+			const excludedPaths = this.plugin.settings.excludedPaths.map((p, pIndex) =>
+				pIndex === index ? path : p,
+			);
+			await this.plugin.updateSettings(
+				{
+					excludedPaths,
+				},
+				{ rebuildIndex: true },
+			);
+		});
 	}
 
 	private scheduleSourceRuleUpdate(index: number, patch: Partial<TaskSourceRule>): void {

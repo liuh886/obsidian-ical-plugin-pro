@@ -1,6 +1,7 @@
 import { Settings } from "../Model/Settings";
 import { SyncReadinessService } from "./SyncReadinessService";
 import { ErrorHelper } from "../Service/ErrorHelper";
+import { logger } from "../Service/Logger";
 
 type SyncFn = () => Promise<void>;
 type RegisterIntervalFn = (intervalId: number) => void;
@@ -24,7 +25,7 @@ export class SyncAutomationService {
 
 		const intervalId = window.setInterval(() => {
 			void runSync().catch((error) => {
-				console.error(`iCal Pro: periodic sync failed: ${ErrorHelper.get(error)}`);
+				logger().error(`iCal Pro: periodic sync failed: ${ErrorHelper.get(error)}`);
 			});
 		}, settings.periodicSaveInterval * 60 * 1000);
 
@@ -40,7 +41,7 @@ export class SyncAutomationService {
 		try {
 			await runSync();
 		} catch (error) {
-			console.error(`iCal Pro: startup sync failed: ${ErrorHelper.get(error)}`);
+			logger().error(`iCal Pro: startup sync failed: ${ErrorHelper.get(error)}`);
 		}
 	}
 }

@@ -39,6 +39,7 @@ export interface Settings {
 	excludeTasksWithTags: string;
 	rootPath: string;
 	sourceRules: TaskSourceRule[];
+	excludedPaths: string[];
 	linkPlacement: LinkPlacement;
 	enableAlarms: boolean;
 	defaultAlarmOffset: number;
@@ -100,6 +101,7 @@ export const DEFAULT_SETTINGS: Settings = {
 	excludeTasksWithTags: "#ignore",
 	rootPath: "/",
 	sourceRules: [],
+	excludedPaths: [],
 	linkPlacement: "Location",
 	enableAlarms: true,
 	defaultAlarmOffset: 20,
@@ -127,6 +129,10 @@ export const migrateSettings = (raw: LegacySettings | null | undefined): Setting
 
 	if (!settings.savePath) {
 		settings.savePath = "/";
+	}
+
+	if (!Array.isArray(raw?.excludedPaths)) {
+		settings.excludedPaths = [];
 	}
 
 	if (!Array.isArray(raw?.sourceRules) || raw.sourceRules.length === 0) {

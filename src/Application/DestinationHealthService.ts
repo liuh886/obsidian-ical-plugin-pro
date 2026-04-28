@@ -104,7 +104,7 @@ export class DestinationHealthService {
 		}
 
 		if (githubGist?.enabled && !githubGist.ready) {
-			return "Complete the GitHub username, Gist ID, and personal access token fields, then validate access.";
+			return "Complete the GitHub username, gist id, and personal access token fields, then validate access.";
 		}
 
 		return "No destination issues detected.";

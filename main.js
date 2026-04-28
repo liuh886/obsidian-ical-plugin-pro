@@ -205,7 +205,7 @@ var DestinationHealthService = class {
       return "Set a vault storage path for local file export.";
     }
     if ((githubGist == null ? void 0 : githubGist.enabled) && !githubGist.ready) {
-      return "Complete the GitHub username, Gist ID, and personal access token fields, then validate access.";
+      return "Complete the GitHub username, gist id, and personal access token fields, then validate access.";
     }
     return "No destination issues detected.";
   }
@@ -240,7 +240,7 @@ var ConnectionValidationService = class {
       }
       return { success: false, message: `GitHub returned status ${response.status}` };
     } catch (e) {
-      return { success: false, message: "Network error or invalid Token/Gist ID." };
+      return { success: false, message: "Network error or invalid token/gist id." };
     }
   }
 };
@@ -322,6 +322,7 @@ var DEFAULT_SETTINGS = {
   excludeTasksWithTags: "#ignore",
   rootPath: "/",
   sourceRules: [],
+  excludedPaths: [],
   linkPlacement: "Location",
   enableAlarms: true,
   defaultAlarmOffset: 20
@@ -339,6 +340,9 @@ var migrateSettings = (raw) => {
   }
   if (!settings.savePath) {
     settings.savePath = "/";
+  }
+  if (!Array.isArray(raw == null ? void 0 : raw.excludedPaths)) {
+    settings.excludedPaths = [];
   }
   if (!Array.isArray(raw == null ? void 0 : raw.sourceRules) || raw.sourceRules.length === 0) {
     settings.sourceRules = [{ path: settings.rootPath || "/", category: "" }];
@@ -390,6 +394,50 @@ var PluginSettingsStore = class {
   }
 };
 
+// src/Service/Logger.ts
+var _Logger = class _Logger {
+  constructor(isDebug) {
+    __publicField(this, "isDebug");
+    this.isDebug = isDebug;
+  }
+  static getInstance(isDebug) {
+    if (!_Logger.instance) {
+      _Logger.instance = new _Logger(isDebug != null ? isDebug : false);
+    } else if (isDebug !== void 0) {
+      _Logger.instance.isDebug = isDebug;
+    }
+    return _Logger.instance;
+  }
+  log(message, object) {
+    if (this.isDebug) {
+      console.debug("[" + (/* @__PURE__ */ new Date()).toISOString() + "][info][ical] " + message);
+      if (object) {
+        console.debug(object);
+      }
+    }
+  }
+  info(message, object) {
+    this.log(message, object);
+  }
+  warn(message, object) {
+    console.warn("[" + (/* @__PURE__ */ new Date()).toISOString() + "][warn][ical] " + message);
+    if (object) {
+      console.warn(object);
+    }
+  }
+  error(message, object) {
+    console.error("[" + (/* @__PURE__ */ new Date()).toISOString() + "][error][ical] " + message);
+    if (object) {
+      console.error(object);
+    }
+  }
+};
+__publicField(_Logger, "instance");
+var Logger = _Logger;
+function logger(isDebug) {
+  return Logger.getInstance(isDebug);
+}
+
 // src/Application/SyncAutomationService.ts
 var SyncAutomationService = class {
   constructor(readinessService) {
@@ -404,7 +452,7 @@ var SyncAutomationService = class {
     }
     const intervalId = window.setInterval(() => {
       void runSync().catch((error) => {
-        console.error(`iCal Pro: periodic sync failed: ${ErrorHelper.get(error)}`);
+        logger().error(`iCal Pro: periodic sync failed: ${ErrorHelper.get(error)}`);
       });
     }, settings.periodicSaveInterval * 60 * 1e3);
     registerInterval(intervalId);
@@ -417,7 +465,7 @@ var SyncAutomationService = class {
     try {
       await runSync();
     } catch (error) {
-      console.error(`iCal Pro: startup sync failed: ${ErrorHelper.get(error)}`);
+      logger().error(`iCal Pro: startup sync failed: ${ErrorHelper.get(error)}`);
     }
   }
 };
@@ -553,35 +601,6 @@ var HeadingsHelper = class {
   }
 };
 
-// src/Service/Logger.ts
-var _Logger = class _Logger {
-  constructor(isDebug) {
-    __publicField(this, "isDebug");
-    this.isDebug = isDebug;
-  }
-  static getInstance(isDebug) {
-    if (!_Logger.instance) {
-      _Logger.instance = new _Logger(isDebug != null ? isDebug : false);
-    } else if (isDebug !== void 0) {
-      _Logger.instance.isDebug = isDebug;
-    }
-    return _Logger.instance;
-  }
-  log(message, object) {
-    if (this.isDebug) {
-      console.debug("[" + (/* @__PURE__ */ new Date()).toISOString() + "][info][ical] " + message);
-      if (object) {
-        console.debug(object);
-      }
-    }
-  }
-};
-__publicField(_Logger, "instance");
-var Logger = _Logger;
-function logger(isDebug) {
-  return Logger.getInstance(isDebug);
-}
-
 // src/Application/TaskFilterPolicy.ts
 var TaskFilterPolicy = class {
   apply(tasks, settings) {
@@ -646,6 +665,7 @@ var TaskFilterPolicy = class {
 // src/Application/TaskIndexingService.ts
 var INDEX_REBUILD_SETTINGS = [
   "sourceRules",
+  "excludedPaths",
   "isDayPlannerPluginFormatEnabled",
   "respectGlobalTaskFilter",
   "globalTaskFilterTags",
@@ -767,6 +787,9 @@ var TaskIndexingService = class {
     return headings.length > 0 ? new HeadingsHelper(headings) : null;
   }
   getSourceRuleForFile(filePath, settings) {
+    if (settings.excludedPaths.some((excludedPath) => this.isFileWithinRootPath(filePath, excludedPath))) {
+      return null;
+    }
     const rules = settings.sourceRules;
     const matchingRules = rules.filter((rule) => this.isFileWithinRootPath(filePath, rule.path));
     if (matchingRules.length === 0) {
@@ -832,17 +855,15 @@ var GistClient = class {
     return settings.isSaveToGistEnabled;
   }
   async save(calendarContent, settings) {
-    const { githubPersonalAccessToken, githubGistId, filename, isDebug } = settings;
+    const { githubPersonalAccessToken, githubGistId, filename } = settings;
     if (!githubPersonalAccessToken || !githubGistId) {
-      throw new Error("GitHub Gist sync is enabled but Token or Gist ID is missing.");
+      throw new Error("GitHub Gist sync is enabled but token or gist id is missing.");
     }
     const fname = filename || "obsidian.ics";
-    if (isDebug) {
-      console.debug("iCal Pro: Starting Gist Sync...");
-      console.debug(`iCal Pro: Target Gist ID: ${githubGistId}`);
-      console.debug(`iCal Pro: Target Filename: ${fname}`);
-      console.debug(`iCal Pro: Content Length: ${calendarContent.length} chars`);
-    }
+    logger().info("iCal Pro: Starting gist sync...");
+    logger().info(`iCal Pro: Target gist id: ${githubGistId}`);
+    logger().info(`iCal Pro: Target filename: ${fname}`);
+    logger().info(`iCal Pro: Content length: ${calendarContent.length} chars`);
     try {
       const response = await (0, import_obsidian2.requestUrl)({
         url: `https://api.github.com/gists/${githubGistId}`,
@@ -861,16 +882,16 @@ var GistClient = class {
         })
       });
       if (response.status === 200) {
-        if (isDebug) console.debug("iCal Pro: Gist updated successfully!");
+        logger().info("iCal Pro: Gist updated successfully!");
       } else {
         const errorMsg = `GitHub API Error ${response.status}: ${response.text}`;
-        console.error("iCal Pro: Gist Update Failed.", errorMsg);
+        logger().error("iCal Pro: Gist update failed.", errorMsg);
         throw new Error(errorMsg);
       }
     } catch (error) {
       const httpError = error;
       if (httpError.status === 404) {
-        throw new Error(`Gist not found. Check your Gist ID and ensure file '${fname}' exists in it.`);
+        throw new Error(`Gist not found. Check your gist id and ensure file '${fname}' exists in it.`);
       }
       throw error;
     }
@@ -1912,6 +1933,27 @@ var SettingsTab = class extends import_obsidian4.PluginSettingTab {
         });
       })
     );
+    containerEl.createEl("p", {
+      text: "Specify folders or files to explicitly ignore. Tasks in these paths will never be indexed.",
+      cls: "setting-item-description"
+    });
+    const excludedContainer = containerEl.createDiv({ cls: "ical-pro-excluded-paths" });
+    this.plugin.settings.excludedPaths.forEach((path, index) => {
+      this.renderExcludedPathSetting(excludedContainer, path, index);
+    });
+    new import_obsidian4.Setting(containerEl).setName("Add excluded path").setDesc("Add another folder or file to ignore.").addButton(
+      (button) => button.setButtonText("Add exclusion").onClick(() => {
+        this.runAsync(async () => {
+          await this.plugin.updateSettings(
+            {
+              excludedPaths: [...this.plugin.settings.excludedPaths, "/"]
+            },
+            { rebuildIndex: true }
+          );
+          this.display();
+        });
+      })
+    );
   }
   renderDateSettings(containerEl) {
     this.addHeader(containerEl, "calendar-days", "Scheduling and alarms");
@@ -2248,6 +2290,40 @@ var SettingsTab = class extends import_obsidian4.PluginSettingTab {
       })
     );
   }
+  renderExcludedPathSetting(containerEl, path, index) {
+    new import_obsidian4.Setting(containerEl).setName(`Excluded path ${index + 1}`).addText((text) => {
+      new FolderSuggest(this.app, text.inputEl);
+      text.setPlaceholder("/").setValue(path).onChange((value) => {
+        this.scheduleExcludedPathUpdate(index, (0, import_obsidian4.normalizePath)(value) || "/");
+      });
+    }).addExtraButton(
+      (button) => button.setIcon("trash").setTooltip("Remove exclusion").onClick(() => {
+        this.runAsync(async () => {
+          const excludedPaths = this.plugin.settings.excludedPaths.filter((_, pathIndex) => pathIndex !== index);
+          await this.plugin.updateSettings(
+            {
+              excludedPaths
+            },
+            { rebuildIndex: true }
+          );
+          this.display();
+        });
+      })
+    );
+  }
+  scheduleExcludedPathUpdate(index, path) {
+    this.scheduleUpdate(`excluded-path-${index}`, async () => {
+      const excludedPaths = this.plugin.settings.excludedPaths.map(
+        (p, pIndex) => pIndex === index ? path : p
+      );
+      await this.plugin.updateSettings(
+        {
+          excludedPaths
+        },
+        { rebuildIndex: true }
+      );
+    });
+  }
   scheduleSourceRuleUpdate(index, patch) {
     this.scheduleUpdate(`source-rule-${index}`, async () => {
       const sourceRules = this.plugin.settings.sourceRules.map(
@@ -2409,7 +2485,7 @@ var ObsidianIcalPlugin = class extends import_obsidian5.Plugin {
           destinationResults: []
         });
       }
-      console.error(`iCal Pro: sync error details: ${ErrorHelper.get(error)}`);
+      logger().error(`iCal Pro: sync error details: ${ErrorHelper.get(error)}`);
       throw error;
     } finally {
       await this.saveSettings();

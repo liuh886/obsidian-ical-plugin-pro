@@ -181,7 +181,7 @@ export default class ObsidianIcalPlugin extends Plugin {
 			                destinationResults: [],
 			        });
 			}
-			console.error(`iCal Pro: sync error details: ${ErrorHelper.get(error)}`);
+			logger().error(`iCal Pro: sync error details: ${ErrorHelper.get(error)}`);
 			throw error;
 			} finally {
 			await this.saveSettings();
