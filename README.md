@@ -73,8 +73,12 @@ Client support for `VTODO` varies. Apple-oriented ecosystems usually handle `VTO
 3. Add at least one source path rule
 4. Enable at least one destination:
    - local vault file export
-   - GitHub Gist sync
-5. If you use Gist, fill in username, Gist ID, and PAT, then click `Validate`
+   - [GitHub Gist sync](https://gist.github.com/)
+5. If you use GitHub Gist sync:
+   - Create a secret Gist at [gist.github.com](https://gist.github.com/) and keep the generated `.ics` file there.
+   - Copy the Gist ID from the Gist URL. In `https://gist.github.com/username/gist-id`, the final segment is the Gist ID.
+   - Generate a [GitHub personal access token](https://github.com/settings/tokens/new?scopes=gist&description=iCal%20Pro%20Gist%20sync) with only the `gist` scope selected. A classic PAT is recommended for this workflow.
+   - Fill in your GitHub username, Gist ID, and PAT in iCal Pro, then click `Validate`.
 6. Click `Sync Now`
 7. Subscribe to the generated raw Gist URL or local `.ics` file
 
