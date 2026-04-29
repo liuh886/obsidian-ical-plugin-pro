@@ -17,10 +17,8 @@ export class Logger {
 
 	public log(message: string, object?: unknown): void {
 		if (this.isDebug) {
-			// eslint-disable-next-line no-console
 			console.debug("[" + new Date().toISOString() + "][info][ical] " + message);
 			if (object) {
-				// eslint-disable-next-line no-console
 				console.debug(object);
 			}
 		}
@@ -31,19 +29,15 @@ export class Logger {
 	}
 
 	public warn(message: string, object?: unknown): void {
-		// eslint-disable-next-line no-console
 		console.warn("[" + new Date().toISOString() + "][warn][ical] " + message);
 		if (object) {
-			// eslint-disable-next-line no-console
 			console.warn(object);
 		}
 	}
 
 	public error(message: string, object?: unknown): void {
-		// eslint-disable-next-line no-console
 		console.error("[" + new Date().toISOString() + "][error][ical] " + message);
 		if (object) {
-			// eslint-disable-next-line no-console
 			console.error(object);
 		}
 	}

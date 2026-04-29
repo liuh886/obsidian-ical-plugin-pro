@@ -304,7 +304,7 @@ export class SettingsTab extends PluginSettingTab {
 				}),
 			)
 			.addText((text) =>
-				text.setPlaceholder("#Task").setValue(this.plugin.settings.globalTaskFilterTags).onChange((value) => {
+				text.setPlaceholder("#task").setValue(this.plugin.settings.globalTaskFilterTags).onChange((value) => {
 					this.scheduleUpdate("globalTaskFilterTags", () =>
 						this.plugin.updateSettings(
 							{ globalTaskFilterTags: value || "#task" },
@@ -364,7 +364,7 @@ export class SettingsTab extends PluginSettingTab {
 				}),
 			)
 			.addText((text) =>
-				text.setPlaceholder("#Work #sync").setValue(this.plugin.settings.includeTasksWithTags).onChange((value) => {
+				text.setPlaceholder("#work #sync").setValue(this.plugin.settings.includeTasksWithTags).onChange((value) => {
 					this.scheduleUpdate("includeTasksWithTags", () =>
 						this.plugin.updateSettings(
 							{ includeTasksWithTags: value },
@@ -386,7 +386,7 @@ export class SettingsTab extends PluginSettingTab {
 				}),
 			)
 			.addText((text) =>
-				text.setPlaceholder("#Private").setValue(this.plugin.settings.excludeTasksWithTags).onChange((value) => {
+				text.setPlaceholder("#private").setValue(this.plugin.settings.excludeTasksWithTags).onChange((value) => {
 					this.scheduleUpdate("excludeTasksWithTags", () =>
 						this.plugin.updateSettings(
 							{ excludeTasksWithTags: value },
@@ -467,7 +467,7 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Gist id")
+			.setName("Gist ID")
 			.setDesc(this.createDescriptionWithLink(
 				"Enter the identifier from the gist link used as the sync target. ",
 				"Open Gist",
